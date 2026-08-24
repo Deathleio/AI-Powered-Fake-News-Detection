@@ -73,31 +73,29 @@ body {
     font-weight: 600;
 }
 
-.api-config {
+.header-status .status-indicator {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--success);
+    background: var(--success-bg);
+    border: 1px solid var(--success-border);
+    padding: 4px 12px;
+    border-radius: 20px;
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 0.85rem;
+    gap: 6px;
 }
 
-.api-config label { color: var(--text-muted); font-weight: 600; display: flex; align-items: center; gap: 5px; }
-
-.api-config input {
-    border: 1px solid var(--border);
-    padding: 6px 12px;
-    border-radius: var(--radius-sm);
-    font-size: 0.85rem;
-    width: 260px;
-    background: #f1f5f9;
+.header-status .status-indicator i {
+    font-size: 0.55rem;
+    color: var(--success);
+    animation: pulse 2s infinite;
 }
 
-.api-config button {
-    background: var(--primary);
-    color: white;
-    border: none;
-    padding: 6px 10px;
-    border-radius: var(--radius-sm);
-    cursor: pointer;
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.4; }
+    100% { opacity: 1; }
 }
 
 /* Layout */

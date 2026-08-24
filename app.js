@@ -17,21 +17,11 @@
     }
 };
 
-let currentApiUrl = localStorage.getItem("veritas_api_url") || "http://127.0.0.1:8000";
+// Production Backend API URL (Seamlessly configured)
+const DEFAULT_BACKEND_URL = "https://ai-powered-fake-news-detection.onrender.com";
+let currentApiUrl = localStorage.getItem("veritas_api_url") || DEFAULT_BACKEND_URL;
 
 document.addEventListener("DOMContentLoaded", () => {
-    const apiInput = document.getElementById("apiUrlInput");
-    apiInput.value = currentApiUrl;
-
-    document.getElementById("saveApiBtn").addEventListener("click", () => {
-        const url = apiInput.value.trim().replace(/\/+$/, "");
-        if (url) {
-            currentApiUrl = url;
-            localStorage.setItem("veritas_api_url", currentApiUrl);
-            alert(`Backend API set to: ${currentApiUrl}`);
-        }
-    });
-
     document.getElementById("analyzeForm").addEventListener("submit", async (e) => {
         e.preventDefault();
         await analyzeArticle();
@@ -75,14 +65,14 @@ async function analyzeArticle() {
         });
 
         if (!response.ok) {
-            throw new Error(`Server returned status ${response.status} (${response.statusText})`);
+            throw new Error(`Server responded with status ${response.status}`);
         }
 
         const data = await response.json();
         renderResults(data);
 
     } catch (err) {
-        alert(`Failed to connect to backend (${cleanApiUrl}): ${err.message}\n\nPlease verify your backend is running or update the Backend URL in the top-right.`);
+        alert(`Note: The backend cloud service may be spinning up from idle (takes ~30-45s on Render free tier). Please try again in a few seconds.\n\nError details: ${err.message}`);
     } finally {
         submitBtn.disabled = false;
         submitBtn.innerHTML = '<i class="fa-solid fa-magnifying-glass-chart"></i> Run AI Classification';
