@@ -1,6 +1,11 @@
 ﻿[build]
-  base = "frontend"
   publish = "frontend"
+  command = "echo 'Deploying static frontend'"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
 
 [[headers]]
   for = "/*"
