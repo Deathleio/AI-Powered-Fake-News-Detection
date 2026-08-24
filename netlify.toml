@@ -1,5 +1,6 @@
 ﻿[build]
-  publish = "."
+  base = "frontend"
+  publish = "frontend"
 
 [[headers]]
   for = "/*"
