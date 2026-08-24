@@ -1,19 +1,19 @@
 ﻿const PRESETS = {
-    economy: {
-        title: "Federal Reserve Holds Benchmark Interest Rates Steady Amid Stable Economic Growth",
-        text: "The Federal Reserve announced on Wednesday that it will maintain its benchmark interest rate within the current target range following a unanimous vote by the Federal Open Market Committee. Central bank officials cited continuing job growth, steady consumer spending, and moderate inflation figures in their official policy statement released in Washington."
+    grassroots: {
+        title: "BREAKING REPORT: Massive Turnout at Nationwide Grassroots Rally for Economic Relief",
+        text: "Thousands of citizens gathered across major cities this weekend demanding urgent legislative action on middle-class taxation and community development funding."
     },
-    science: {
-        title: "Scientists Publish Comprehensive Peer-Reviewed Study on Global Climate Trends in Nature",
-        text: "Researchers at the Meteorological Institute reported on Thursday that global temperature records confirm continuing warming patterns across major continental zones according to observational data gathered over the past decade. The findings, published in the journal Nature, highlight significant regional variations in seasonal precipitation."
+    investigation: {
+        title: "WATCH: Special Report Highlights Key Evidence in Campaign Spending Investigation",
+        text: "An exclusive investigative piece reveals deep details on campaign fund allocations and financial disclosures filed ahead of the upcoming primary vote."
     },
-    conspiracy: {
-        title: "SHOCKING BOMBSHELL: Secret Globalist Plot Leaked To Ban All Cash And Confiscate Savings By Next Week [VIDEO]",
-        text: "UNBELIEVABLE! Top secret government whistleblowers have exposed an explosive classified document proving corrupt globalist elites are orchestrating a total financial blackout to seize your private bank accounts! Mainstream media refuses to report this terrifying scheme. Watch the emergency video before censors take it down!"
+    diplomacy: {
+        title: "European Parliament Rejects Brexit Proposal Citing Citizen Rights Concerns",
+        text: "The European Parliament said on Tuesday that British Prime Minister proposals for European citizens living in Britain fell short and would create a second class of citizens."
     },
-    medical: {
-        title: "MIRACLE CURE EXPOSED: Big Pharma Panic As Secret Ancient Root Cures All Disease Overnight [MUST SEE]",
-        text: "Doctors are STUNNED and corrupt pharmaceutical executives are in a panic! This 100% natural ancient herbal remedy is being suppressed because it completely reverses aging and cures every chronic condition in just 24 hours. The medical establishment does not want you to know the truth!"
+    politics: {
+        title: "Schumer calls on Trump to appoint official to oversee disaster recovery effort",
+        text: "Senate Democratic Leader Chuck Schumer called on President Donald Trump to appoint a single official to manage the recovery effort following the recent hurricane damage."
     }
 };
 
@@ -118,7 +118,7 @@ function renderResults(data) {
     icon.innerHTML = isFake 
         ? '<i class="fa-solid fa-triangle-exclamation"></i>' 
         : '<i class="fa-solid fa-circle-check"></i>';
-    title.innerText = isFake ? "Fake / Clickbait News" : "Real / Factual News";
+    title.innerText = isFake ? "Fake / Disinformation News" : "Real / Authentic News";
     badge.innerText = `${data.confidence_percentage}% Confidence`;
 
     progressFill.className = `progress-fill ${isFake ? "fake" : "real"}`;
