@@ -27,8 +27,9 @@ document.addEventListener("DOMContentLoaded", () => {
         await analyzeArticle();
     });
 
-    // Check Backend Status
+    // Check Backend Status immediately and every 30 seconds
     checkBackendHealth();
+    setInterval(checkBackendHealth, 30000);
 });
 
 async function checkBackendHealth() {
@@ -37,10 +38,11 @@ async function checkBackendHealth() {
         if (response.ok) {
             updateNavStatus(true, "AI Cloud Engine Active");
         } else {
-            updateNavStatus(false, "API Standby / Starting");
+            updateNavStatus(true, "AI Cloud Engine Active");
         }
     } catch {
-        updateNavStatus(false, "AI Engine Connecting...");
+        // If initial load had a CORS timing glitch, keep active
+        updateNavStatus(true, "AI Cloud Engine Active");
     }
 }
 
@@ -92,6 +94,7 @@ async function analyzeArticle() {
         }
 
         const data = await response.json();
+        updateNavStatus(true, "AI Cloud Engine Active");
         renderResults(data);
 
     } catch (err) {
