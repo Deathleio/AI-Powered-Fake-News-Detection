@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <meta name="theme-color" content="#fbf9f5">
     <title>VeritasAI • Fake News Detection & Explainable NLP Engine</title>
     <!-- Google Fonts & FontAwesome -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -19,7 +20,7 @@
             <div class="logo">
                 <i class="fa-solid fa-shield-halved"></i>
                 <span>Veritas<strong>AI</strong></span>
-                <span class="badge-tag">Fake News Detector</span>
+                <span class="badge-tag">Detector</span>
             </div>
             <div class="header-right">
                 <span class="status-indicator online" id="navStatusIndicator">
@@ -35,12 +36,12 @@
         <section class="card input-card">
             <div class="card-header">
                 <h2><i class="fa-regular fa-newspaper"></i> Analyze News Article</h2>
-                <p class="subtitle">Enter a headline and body text to inspect linguistic veracity, clickbait markers, and authenticity score.</p>
+                <p class="subtitle">Enter a headline and body text to inspect linguistic veracity and authenticity.</p>
             </div>
 
             <!-- Preset Samples -->
             <div class="presets-container">
-                <span class="presets-label"><i class="fa-solid fa-wand-magic-sparkles"></i> Try Quick Samples:</span>
+                <span class="presets-label"><i class="fa-solid fa-wand-magic-sparkles"></i> Quick Samples:</span>
                 <div class="presets-grid">
                     <button class="preset-btn real" onclick="loadSample('economy')">
                         <i class="fa-solid fa-landmark"></i> Economy (Real)
@@ -65,7 +66,7 @@
 
                 <div class="form-group">
                     <label for="articleText">Article Body Content</label>
-                    <textarea id="articleText" rows="7" placeholder="Paste full article text, reporting paragraphs, or press release..."></textarea>
+                    <textarea id="articleText" rows="6" placeholder="Paste full article text or news paragraphs..."></textarea>
                 </div>
 
                 <div class="form-actions">
@@ -89,7 +90,7 @@
             <div id="placeholderState" class="empty-state">
                 <div class="empty-icon"><i class="fa-solid fa-microchip"></i></div>
                 <h3>Ready For Evaluation</h3>
-                <p>Submit an article or pick a preset sample to view real-time deep learning classification, confidence scoring, and token-level explainability.</p>
+                <p>Submit an article or choose a preset sample to view real-time deep learning classification and explainability.</p>
             </div>
 
             <!-- Active Results Content -->
@@ -145,8 +146,8 @@
     <!-- Footer -->
     <footer class="footer">
         <div class="container footer-content">
-            <p>AI Powered Fake News Detection System • Built with NLP & Deep Learning</p>
-            <p class="stats-line"><i class="fa-solid fa-bolt"></i> 97.49% Benchmark Accuracy on 72k Articles</p>
+            <p>AI Powered Fake News Detection System • NLP & Deep Learning</p>
+            <p class="stats-line"><i class="fa-solid fa-bolt"></i> 97.49% Benchmark Accuracy</p>
         </div>
     </footer>
 
