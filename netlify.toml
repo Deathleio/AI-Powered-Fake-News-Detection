@@ -1,4 +1,4 @@
-﻿[build]
+[build]
   publish = "frontend"
   command = "echo 'Deploying static frontend'"
 
