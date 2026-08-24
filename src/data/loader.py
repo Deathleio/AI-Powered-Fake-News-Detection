@@ -10,6 +10,7 @@ from src.data.preprocessor import TextPreprocessor
 def load_raw_dataset(csv_path: str = config.RAW_DATA_PATH) -> pd.DataFrame:
     """
     Loads and cleans invalid rows from the WELFake dataset.
+    Standardizes label mapping: 1 = Real News, 0 = Fake News.
     """
     if not os.path.exists(csv_path):
         raise FileNotFoundError(f"Dataset not found at {csv_path}")
@@ -28,8 +29,9 @@ def load_raw_dataset(csv_path: str = config.RAW_DATA_PATH) -> pd.DataFrame:
     mask = (df['title'].str.strip() != '') | (df['text'].str.strip() != '')
     df = df[mask].reset_index(drop=True)
     
-    # 4. Ensure integer labels
-    df['label'] = df['label'].astype(int)
+    # 4. Invert Labels: 1 = Real News, 0 = Fake News
+    # In raw WELFake: 0 was real, 1 was fake. We map: (label == 0) -> 1 (Real), (label == 1) -> 0 (Fake)
+    df['label'] = (df['label'].astype(int) == 0).astype(int)
     return df
 
 def get_stratified_splits(
@@ -41,7 +43,6 @@ def get_stratified_splits(
     """
     Generates leak-free, stratified Train, Validation, and Test splits.
     """
-    # First split off Test set
     train_val_df, test_df = train_test_split(
         df,
         test_size=test_size,
@@ -49,10 +50,7 @@ def get_stratified_splits(
         random_state=random_state
     )
     
-    # Calculate relative validation size
     val_relative_size = val_size / (1.0 - test_size)
-    
-    # Split Train and Validation sets
     train_df, val_df = train_test_split(
         train_val_df,
         test_size=val_relative_size,
@@ -66,7 +64,7 @@ def get_stratified_splits(
         'test': test_df.reset_index(drop=True)
     }
 
-def prepare_split_data(title_repeat: int = 2) -> Dict[str, Tuple[list, np.ndarray]]:
+def prepare_split_data(title_repeat: int = 1) -> Dict[str, Tuple[list, np.ndarray]]:
     """
     Loads dataset, applies preprocessor, and returns (X_texts, y_labels) for train, val, test.
     """

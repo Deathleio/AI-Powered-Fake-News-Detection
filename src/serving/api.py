@@ -78,14 +78,16 @@ def predict_news(request: NewsArticleRequest):
     if not fused_text:
         raise HTTPException(status_code=400, detail="Both title and text cannot be empty.")
         
-    proba = float(model.predict_proba([fused_text])[0, 1])
-    is_fake = proba >= 0.5
-    confidence = proba if is_fake else (1.0 - proba)
+    # Class 1 = Real, Class 0 = Fake
+    proba_real = float(model.predict_proba([fused_text])[0, 1])
+    proba_fake = 1.0 - proba_real
+    is_fake = proba_fake >= 0.5
+    confidence = proba_fake if is_fake else proba_real
     verdict = "Fake News" if is_fake else "Real News"
     
     return PredictionResponse(
         verdict=verdict,
-        fake_probability=round(proba, 4),
+        fake_probability=round(proba_fake, 4),
         confidence_percentage=round(confidence * 100, 2),
         is_fake=is_fake
     )
@@ -97,9 +99,11 @@ def explain_news(request: NewsArticleRequest):
     if not fused_text:
         raise HTTPException(status_code=400, detail="Both title and text cannot be empty.")
         
-    proba = float(model.predict_proba([fused_text])[0, 1])
-    is_fake = proba >= 0.5
-    confidence = proba if is_fake else (1.0 - proba)
+    # Class 1 = Real, Class 0 = Fake
+    proba_real = float(model.predict_proba([fused_text])[0, 1])
+    proba_fake = 1.0 - proba_real
+    is_fake = proba_fake >= 0.5
+    confidence = proba_fake if is_fake else proba_real
     verdict = "Fake News" if is_fake else "Real News"
     
     saliency = extract_tfidf_word_importance(fused_text, model, top_k=8)
@@ -112,14 +116,14 @@ def explain_news(request: NewsArticleRequest):
     reasoning = fact_checker.synthesize_verdict(
         headline=request.title or "",
         text_snippet=request.text[:300] if request.text else "",
-        fake_probability=proba,
+        fake_probability=proba_fake,
         salient_fake_words=saliency['fake_indicators'],
         salient_real_words=saliency['real_indicators']
     )
     
     return ExplainablePredictionResponse(
         verdict=verdict,
-        fake_probability=round(proba, 4),
+        fake_probability=round(proba_fake, 4),
         confidence_percentage=round(confidence * 100, 2),
         is_fake=is_fake,
         fake_indicators=saliency['fake_indicators'],
