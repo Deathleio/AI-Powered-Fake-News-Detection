@@ -17,9 +17,8 @@
     }
 };
 
-// Default Backend URL fallback
-const DEFAULT_BACKEND_URL = "https://ai-powered-fake-news-detection.onrender.com";
-let currentApiUrl = localStorage.getItem("veritas_api_url") || DEFAULT_BACKEND_URL;
+// Permanent Live Backend API Endpoint on Render
+const BACKEND_API_URL = "https://ai-powered-fake-news-detection-bcbb.onrender.com";
 
 document.addEventListener("DOMContentLoaded", () => {
     // Form submission
@@ -28,78 +27,30 @@ document.addEventListener("DOMContentLoaded", () => {
         await analyzeArticle();
     });
 
-    // Settings Modal Listeners
-    document.getElementById("openSettingsBtn").addEventListener("click", openSettingsModal);
-    document.getElementById("closeSettingsBtn").addEventListener("click", closeSettingsModal);
-    document.getElementById("cancelSettingsBtn").addEventListener("click", closeSettingsModal);
-    document.getElementById("saveBackendUrlBtn").addEventListener("click", saveAndTestBackendUrl);
-
-    // Initial Health Check
+    // Check Backend Status
     checkBackendHealth();
 });
 
-function openSettingsModal() {
-    const input = document.getElementById("backendUrlInput");
-    input.value = currentApiUrl;
-    document.getElementById("settingsModal").style.display = "flex";
-}
-
-function closeSettingsModal() {
-    document.getElementById("settingsModal").style.display = "none";
-}
-
-async function saveAndTestBackendUrl() {
-    const input = document.getElementById("backendUrlInput");
-    const rawUrl = input.value.trim().replace(/\/+$/, "");
-    const statusBox = document.getElementById("modalConnectionStatus");
-
-    if (!rawUrl) {
-        alert("Please enter a valid Render URL (e.g., https://your-service.onrender.com)");
-        return;
-    }
-
-    statusBox.className = "connection-status-box checking";
-    statusBox.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Pinging backend server...';
-
-    try {
-        const response = await fetch(`${rawUrl}/health`, { method: "GET" });
-        if (!response.ok) throw new Error(`HTTP Status ${response.status}`);
-        
-        currentApiUrl = rawUrl;
-        localStorage.setItem("veritas_api_url", currentApiUrl);
-
-        statusBox.className = "connection-status-box success";
-        statusBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> Connected successfully to AI Backend!';
-        
-        updateNavStatus(true, "AI Engine Connected");
-        setTimeout(closeSettingsModal, 1200);
-
-    } catch (err) {
-        statusBox.className = "connection-status-box error";
-        statusBox.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Connection failed: ${err.message}. If Render is waking up from sleep, wait 30s and retry.`;
-        updateNavStatus(false, "API Disconnected");
-    }
-}
-
 async function checkBackendHealth() {
-    const cleanUrl = currentApiUrl.replace(/\/+$/, "");
     try {
-        const response = await fetch(`${cleanUrl}/health`, { method: "GET" });
+        const response = await fetch(`${BACKEND_API_URL}/health`, { method: "GET" });
         if (response.ok) {
-            updateNavStatus(true, "AI Engine Connected");
+            updateNavStatus(true, "AI Cloud Engine Active");
         } else {
-            updateNavStatus(false, "API Standby / Idle");
+            updateNavStatus(false, "API Standby / Starting");
         }
     } catch {
-        updateNavStatus(false, "API Standby (Click ⚙️ to set)");
+        updateNavStatus(false, "AI Engine Connecting...");
     }
 }
 
 function updateNavStatus(isOnline, text) {
     const ind = document.getElementById("navStatusIndicator");
     const txt = document.getElementById("statusText");
-    ind.className = `status-indicator ${isOnline ? "online" : "offline"}`;
-    txt.innerText = text;
+    if (ind && txt) {
+        ind.className = `status-indicator ${isOnline ? "online" : "offline"}`;
+        txt.innerText = text;
+    }
 }
 
 function loadSample(key) {
@@ -129,10 +80,8 @@ async function analyzeArticle() {
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Analyzing with AI...';
 
-    const cleanApiUrl = currentApiUrl.replace(/\/+$/, "");
-
     try {
-        const response = await fetch(`${cleanApiUrl}/explain`, {
+        const response = await fetch(`${BACKEND_API_URL}/explain`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ title, text })
@@ -146,7 +95,7 @@ async function analyzeArticle() {
         renderResults(data);
 
     } catch (err) {
-        alert(`Failed to reach backend API (${cleanApiUrl}).\n\n1. If your Render backend is waking up, wait 30-40s and try again.\n2. Or click the ⚙️ Gear icon in the top right to verify/change your Render URL.\n\nError: ${err.message}`);
+        alert(`Note: The backend cloud service may take a moment to wake up if idle (Render free tier). Please try again in 10-20 seconds.\n\nError details: ${err.message}`);
     } finally {
         submitBtn.disabled = false;
         submitBtn.innerHTML = '<i class="fa-solid fa-magnifying-glass-chart"></i> Run AI Classification';
