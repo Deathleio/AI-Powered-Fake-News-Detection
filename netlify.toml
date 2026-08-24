@@ -1,6 +1,6 @@
 [build]
-  publish = "frontend"
-  command = "echo 'Deploying static frontend'"
+  publish = "."
+  command = "echo 'Build complete'"
 
 [[redirects]]
   from = "/*"
