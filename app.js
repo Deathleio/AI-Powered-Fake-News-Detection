@@ -17,16 +17,90 @@
     }
 };
 
-// Production Backend API URL (Seamlessly configured)
+// Default Backend URL fallback
 const DEFAULT_BACKEND_URL = "https://ai-powered-fake-news-detection.onrender.com";
 let currentApiUrl = localStorage.getItem("veritas_api_url") || DEFAULT_BACKEND_URL;
 
 document.addEventListener("DOMContentLoaded", () => {
+    // Form submission
     document.getElementById("analyzeForm").addEventListener("submit", async (e) => {
         e.preventDefault();
         await analyzeArticle();
     });
+
+    // Settings Modal Listeners
+    document.getElementById("openSettingsBtn").addEventListener("click", openSettingsModal);
+    document.getElementById("closeSettingsBtn").addEventListener("click", closeSettingsModal);
+    document.getElementById("cancelSettingsBtn").addEventListener("click", closeSettingsModal);
+    document.getElementById("saveBackendUrlBtn").addEventListener("click", saveAndTestBackendUrl);
+
+    // Initial Health Check
+    checkBackendHealth();
 });
+
+function openSettingsModal() {
+    const input = document.getElementById("backendUrlInput");
+    input.value = currentApiUrl;
+    document.getElementById("settingsModal").style.display = "flex";
+}
+
+function closeSettingsModal() {
+    document.getElementById("settingsModal").style.display = "none";
+}
+
+async function saveAndTestBackendUrl() {
+    const input = document.getElementById("backendUrlInput");
+    const rawUrl = input.value.trim().replace(/\/+$/, "");
+    const statusBox = document.getElementById("modalConnectionStatus");
+
+    if (!rawUrl) {
+        alert("Please enter a valid Render URL (e.g., https://your-service.onrender.com)");
+        return;
+    }
+
+    statusBox.className = "connection-status-box checking";
+    statusBox.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Pinging backend server...';
+
+    try {
+        const response = await fetch(`${rawUrl}/health`, { method: "GET" });
+        if (!response.ok) throw new Error(`HTTP Status ${response.status}`);
+        
+        currentApiUrl = rawUrl;
+        localStorage.setItem("veritas_api_url", currentApiUrl);
+
+        statusBox.className = "connection-status-box success";
+        statusBox.innerHTML = '<i class="fa-solid fa-circle-check"></i> Connected successfully to AI Backend!';
+        
+        updateNavStatus(true, "AI Engine Connected");
+        setTimeout(closeSettingsModal, 1200);
+
+    } catch (err) {
+        statusBox.className = "connection-status-box error";
+        statusBox.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Connection failed: ${err.message}. If Render is waking up from sleep, wait 30s and retry.`;
+        updateNavStatus(false, "API Disconnected");
+    }
+}
+
+async function checkBackendHealth() {
+    const cleanUrl = currentApiUrl.replace(/\/+$/, "");
+    try {
+        const response = await fetch(`${cleanUrl}/health`, { method: "GET" });
+        if (response.ok) {
+            updateNavStatus(true, "AI Engine Connected");
+        } else {
+            updateNavStatus(false, "API Standby / Idle");
+        }
+    } catch {
+        updateNavStatus(false, "API Standby (Click ⚙️ to set)");
+    }
+}
+
+function updateNavStatus(isOnline, text) {
+    const ind = document.getElementById("navStatusIndicator");
+    const txt = document.getElementById("statusText");
+    ind.className = `status-indicator ${isOnline ? "online" : "offline"}`;
+    txt.innerText = text;
+}
 
 function loadSample(key) {
     if (PRESETS[key]) {
@@ -72,7 +146,7 @@ async function analyzeArticle() {
         renderResults(data);
 
     } catch (err) {
-        alert(`Note: The backend cloud service may be spinning up from idle (takes ~30-45s on Render free tier). Please try again in a few seconds.\n\nError details: ${err.message}`);
+        alert(`Failed to reach backend API (${cleanApiUrl}).\n\n1. If your Render backend is waking up, wait 30-40s and try again.\n2. Or click the ⚙️ Gear icon in the top right to verify/change your Render URL.\n\nError: ${err.message}`);
     } finally {
         submitBtn.disabled = false;
         submitBtn.innerHTML = '<i class="fa-solid fa-magnifying-glass-chart"></i> Run AI Classification';
@@ -91,7 +165,6 @@ function renderResults(data) {
     const progressFill = document.getElementById("progressFill");
     const meterPercent = document.getElementById("meterPercent");
 
-    // Configure Verdict Banner
     banner.className = `verdict-banner ${isFake ? "fake" : "real"}`;
     icon.innerHTML = isFake 
         ? '<i class="fa-solid fa-triangle-exclamation"></i>' 
@@ -99,12 +172,10 @@ function renderResults(data) {
     title.innerText = isFake ? "Fake / Clickbait News" : "Real / Factual News";
     badge.innerText = `${data.confidence_percentage}% Confidence`;
 
-    // Configure Progress Meter
     progressFill.className = `progress-fill ${isFake ? "fake" : "real"}`;
     progressFill.style.width = `${data.confidence_percentage}%`;
     meterPercent.innerText = `${isFake ? "Fake" : "Authenticity"}: ${data.confidence_percentage}%`;
 
-    // Render Saliency Chips
     const chipsContainer = document.getElementById("chipsContainer");
     chipsContainer.innerHTML = "";
 
@@ -120,13 +191,11 @@ function renderResults(data) {
         chipsContainer.innerHTML = '<span class="small-text">Balanced vocabulary patterns.</span>';
     }
 
-    // AI Rationale
     const rationaleText = document.getElementById("rationaleText");
     rationaleText.innerText = data.llm_reasoning && data.llm_reasoning.rationale 
         ? data.llm_reasoning.rationale 
         : "Classification computed via high-dimensional linguistic feature weights.";
 
-    // Highlighted Text View
     const annotatedBox = document.getElementById("annotatedBox");
     annotatedBox.innerHTML = data.highlighted_html || "<p>Annotation rendered.</p>";
 }

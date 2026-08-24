@@ -21,11 +21,44 @@
                 <span>Veritas<strong>AI</strong></span>
                 <span class="badge-tag">Fake News Detector</span>
             </div>
-            <div class="header-status">
-                <span class="status-indicator"><i class="fa-solid fa-circle"></i> AI Engine Active</span>
+            <div class="header-right">
+                <span class="status-indicator" id="navStatusIndicator">
+                    <i class="fa-solid fa-circle"></i> <span id="statusText">Connecting to API...</span>
+                </span>
+                <button class="btn-icon" id="openSettingsBtn" title="Configure Backend API URL">
+                    <i class="fa-solid fa-gear"></i>
+                </button>
             </div>
         </div>
     </header>
+
+    <!-- Admin API Settings Modal -->
+    <div class="modal-overlay" id="settingsModal" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-server"></i> Backend API Settings</h3>
+                <button class="close-modal-btn" id="closeSettingsBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-desc">Paste your live Render or cloud API link below to connect this frontend to your trained AI model.</p>
+                
+                <div class="form-group">
+                    <label for="backendUrlInput">Render Backend API URL:</label>
+                    <input type="text" id="backendUrlInput" placeholder="https://your-service-name.onrender.com" class="input-field">
+                </div>
+
+                <div class="connection-status-box" id="modalConnectionStatus">
+                    <i class="fa-solid fa-info-circle"></i> Enter your Render link and click "Save & Connect"
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="cancelSettingsBtn">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveBackendUrlBtn">
+                    <i class="fa-solid fa-plug"></i> Save & Test Connection
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- Main Container -->
     <main class="container main-layout">
@@ -145,6 +178,7 @@
         <div class="container footer-content">
             <p>AI Powered Fake News Detection System • Built with NLP & Deep Learning</p>
             <p class="stats-line"><i class="fa-solid fa-bolt"></i> 97.49% Benchmark Accuracy on 72k Articles</p>
+            <p class="settings-link"><a href="javascript:void(0)" onclick="openSettingsModal()"><i class="fa-solid fa-gear"></i> Change Backend API URL</a></p>
         </div>
     </footer>
 
