@@ -9,8 +9,9 @@ from src.data.preprocessor import TextPreprocessor
 
 def load_raw_dataset(csv_path: str = config.RAW_DATA_PATH) -> pd.DataFrame:
     """
-    Loads and cleans invalid rows from the WELFake dataset.
-    Standardizes label mapping: 1 = Real News, 0 = Fake News.
+    Loads dataset strictly respecting user's ground truth definition:
+    0 = FAKE NEWS
+    1 = REAL NEWS
     """
     if not os.path.exists(csv_path):
         raise FileNotFoundError(f"Dataset not found at {csv_path}")
@@ -25,13 +26,12 @@ def load_raw_dataset(csv_path: str = config.RAW_DATA_PATH) -> pd.DataFrame:
     df['title'] = df['title'].fillna('')
     df['text'] = df['text'].fillna('')
     
-    # 3. Filter out zero-signal rows (both title and text empty)
+    # 3. Filter out zero-signal rows
     mask = (df['title'].str.strip() != '') | (df['text'].str.strip() != '')
     df = df[mask].reset_index(drop=True)
     
-    # 4. Invert Labels: 1 = Real News, 0 = Fake News
-    # In raw WELFake: 0 was real, 1 was fake. We map: (label == 0) -> 1 (Real), (label == 1) -> 0 (Fake)
-    df['label'] = (df['label'].astype(int) == 0).astype(int)
+    # 4. User Specification: 0 = Fake News, 1 = Real News
+    df['label'] = df['label'].astype(int)
     return df
 
 def get_stratified_splits(
@@ -40,9 +40,6 @@ def get_stratified_splits(
     val_size: float = 0.15, 
     random_state: int = config.RANDOM_SEED
 ) -> Dict[str, pd.DataFrame]:
-    """
-    Generates leak-free, stratified Train, Validation, and Test splits.
-    """
     train_val_df, test_df = train_test_split(
         df,
         test_size=test_size,
@@ -65,9 +62,6 @@ def get_stratified_splits(
     }
 
 def prepare_split_data(title_repeat: int = 1) -> Dict[str, Tuple[list, np.ndarray]]:
-    """
-    Loads dataset, applies preprocessor, and returns (X_texts, y_labels) for train, val, test.
-    """
     df = load_raw_dataset()
     splits = get_stratified_splits(df)
     preprocessor = TextPreprocessor(title_repeat=title_repeat)

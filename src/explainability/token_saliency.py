@@ -9,7 +9,9 @@ def extract_tfidf_word_importance(
 ) -> Dict[str, Any]:
     """
     Extracts high-impact words driving classification.
-    Target: 1 = Real News (positive coefficients), 0 = Fake News (negative coefficients).
+    Target convention:
+      1 = REAL NEWS (positive weight contribution)
+      0 = FAKE NEWS (negative weight contribution)
     """
     if hasattr(pipeline, 'vectorizer') and hasattr(pipeline, 'clf'):
         vectorizer = pipeline.vectorizer
@@ -38,7 +40,6 @@ def extract_tfidf_word_importance(
         score = val * coefs[idx]
         word_contributions.append((feature_names[idx], float(score)))
         
-    # Class 1 = Real (score > 0), Class 0 = Fake (score < 0)
     real_words = sorted([w for w in word_contributions if w[1] > 0], key=lambda x: x[1], reverse=True)[:top_k]
     fake_words = sorted([w for w in word_contributions if w[1] < 0], key=lambda x: x[1])[:top_k]
     
@@ -51,7 +52,7 @@ def generate_highlighted_html(text: str, fake_tokens: List[str], real_tokens: Li
     html_text = text
     for t in fake_tokens:
         pattern = re.compile(rf'\b({re.escape(t)})\b', re.IGNORECASE)
-        html_text = pattern.sub(r'<span style="background-color: #fee2e2; color: #991b1b; font-weight: bold; padding: 2px 4px; border-radius: 4px;">\1</span>', html_text)
+        html_text = pattern.sub(r'<span style="background-color: #fef2f2; color: #991b1b; font-weight: bold; padding: 2px 4px; border-radius: 4px;">\1</span>', html_text)
         
     for t in real_tokens:
         pattern = re.compile(rf'\b({re.escape(t)})\b', re.IGNORECASE)

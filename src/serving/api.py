@@ -15,7 +15,7 @@ from src.llm_reasoner.fact_check_agent import LLMFactCheckReasoner
 app = FastAPI(
     title="AI-Powered Fake News Detection API",
     version="1.0.0",
-    description="Production REST API for Real-Time Fake News Detection and Token-Level Explainability."
+    description="Production REST API (0 = Fake News, 1 = Real News)."
 )
 
 # Enable CORS for Netlify frontend and cross-origin clients
@@ -78,9 +78,9 @@ def predict_news(request: NewsArticleRequest):
     if not fused_text:
         raise HTTPException(status_code=400, detail="Both title and text cannot be empty.")
         
-    # Class 1 = Real, Class 0 = Fake
+    # Model classes: 0 = Fake, 1 = Real
     proba_real = float(model.predict_proba([fused_text])[0, 1])
-    proba_fake = 1.0 - proba_real
+    proba_fake = float(model.predict_proba([fused_text])[0, 0])
     is_fake = proba_fake >= 0.5
     confidence = proba_fake if is_fake else proba_real
     verdict = "Fake News" if is_fake else "Real News"
@@ -99,9 +99,9 @@ def explain_news(request: NewsArticleRequest):
     if not fused_text:
         raise HTTPException(status_code=400, detail="Both title and text cannot be empty.")
         
-    # Class 1 = Real, Class 0 = Fake
+    # Model classes: 0 = Fake, 1 = Real
     proba_real = float(model.predict_proba([fused_text])[0, 1])
-    proba_fake = 1.0 - proba_real
+    proba_fake = float(model.predict_proba([fused_text])[0, 0])
     is_fake = proba_fake >= 0.5
     confidence = proba_fake if is_fake else proba_real
     verdict = "Fake News" if is_fake else "Real News"
