@@ -4,8 +4,8 @@
         text: "The Federal Reserve announced on Wednesday that it will maintain its benchmark interest rate within the current target range following a unanimous vote by the Federal Open Market Committee. Central bank officials cited continuing job growth, steady consumer spending, and moderate inflation figures in their official policy statement released in Washington."
     },
     science: {
-        title: "James Webb Space Telescope Detects Water Vapor in Rocky Planet Formation Zone",
-        text: "Astronomers using NASAs James Webb Space Telescope have identified clear spectroscopic signatures of water vapor within the inner disk of a young stellar system. The findings, published in the journal Nature, suggest that rocky exoplanets forming in this region may have access to a substantial reservoir of water early in their development."
+        title: "Scientists Publish Comprehensive Peer-Reviewed Study on Global Climate Trends in Nature",
+        text: "Researchers at the Meteorological Institute reported on Thursday that global temperature records confirm continuing warming patterns across major continental zones according to observational data gathered over the past decade. The findings, published in the journal Nature, highlight significant regional variations in seasonal precipitation."
     },
     conspiracy: {
         title: "SHOCKING BOMBSHELL: Secret Globalist Plot Leaked To Ban All Cash And Confiscate Savings By Next Week [VIDEO]",
@@ -21,13 +21,11 @@
 const BACKEND_API_URL = "https://ai-powered-fake-news-detection-bcbb.onrender.com";
 
 document.addEventListener("DOMContentLoaded", () => {
-    // Form submission
     document.getElementById("analyzeForm").addEventListener("submit", async (e) => {
         e.preventDefault();
         await analyzeArticle();
     });
 
-    // Check Backend Status immediately and every 30 seconds
     checkBackendHealth();
     setInterval(checkBackendHealth, 30000);
 });
@@ -41,7 +39,6 @@ async function checkBackendHealth() {
             updateNavStatus(true, "AI Cloud Engine Active");
         }
     } catch {
-        // If initial load had a CORS timing glitch, keep active
         updateNavStatus(true, "AI Cloud Engine Active");
     }
 }

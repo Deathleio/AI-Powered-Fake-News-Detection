@@ -74,7 +74,7 @@ def health():
 @app.post("/predict", response_model=PredictionResponse)
 def predict_news(request: NewsArticleRequest):
     model = get_model()
-    fused_text = fuse_title_body(request.title, request.text, title_repeat=2)
+    fused_text = fuse_title_body(request.title, request.text, title_repeat=1)
     if not fused_text:
         raise HTTPException(status_code=400, detail="Both title and text cannot be empty.")
         
@@ -93,7 +93,7 @@ def predict_news(request: NewsArticleRequest):
 @app.post("/explain", response_model=ExplainablePredictionResponse)
 def explain_news(request: NewsArticleRequest):
     model = get_model()
-    fused_text = fuse_title_body(request.title, request.text, title_repeat=2)
+    fused_text = fuse_title_body(request.title, request.text, title_repeat=1)
     if not fused_text:
         raise HTTPException(status_code=400, detail="Both title and text cannot be empty.")
         
