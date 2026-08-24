@@ -1,0 +1,7 @@
+﻿services:
+  - type: web
+    name: fake-news-detection-api
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn src.serving.api:app --host 0.0.0.0 --port $PORT
+    plan: free

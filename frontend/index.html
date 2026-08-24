@@ -1,0 +1,155 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Fake News Detector & Explainable NLP Engine</title>
+    <!-- Google Fonts & FontAwesome -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <header class="navbar">
+        <div class="container nav-container">
+            <div class="logo">
+                <i class="fa-solid fa-shield-halved"></i>
+                <span>Veritas<strong>AI</strong></span>
+                <span class="badge-tag">Fake News Detector</span>
+            </div>
+            <div class="api-config">
+                <label for="apiUrlInput"><i class="fa-solid fa-server"></i> Backend URL:</label>
+                <input type="text" id="apiUrlInput" value="http://127.0.0.1:8000" placeholder="https://your-backend.onrender.com">
+                <button id="saveApiBtn" title="Save API URL"><i class="fa-solid fa-check"></i></button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="container main-layout">
+        <!-- Input Panel -->
+        <section class="card input-card">
+            <div class="card-header">
+                <h2><i class="fa-regular fa-newspaper"></i> Analyze News Article</h2>
+                <p class="subtitle">Enter a headline and body text to inspect linguistic veracity, clickbait markers, and authenticity score.</p>
+            </div>
+
+            <!-- Preset Samples -->
+            <div class="presets-container">
+                <span class="presets-label"><i class="fa-solid fa-wand-magic-sparkles"></i> Try Quick Samples:</span>
+                <div class="presets-grid">
+                    <button class="preset-btn real" onclick="loadSample('economy')">
+                        <i class="fa-solid fa-landmark"></i> Economy (Real)
+                    </button>
+                    <button class="preset-btn real" onclick="loadSample('science')">
+                        <i class="fa-solid fa-flask"></i> Science (Real)
+                    </button>
+                    <button class="preset-btn fake" onclick="loadSample('conspiracy')">
+                        <i class="fa-solid fa-triangle-exclamation"></i> Conspiracy (Fake)
+                    </button>
+                    <button class="preset-btn fake" onclick="loadSample('medical')">
+                        <i class="fa-solid fa-pills"></i> Medical (Fake)
+                    </button>
+                </div>
+            </div>
+
+            <form id="analyzeForm">
+                <div class="form-group">
+                    <label for="articleTitle">News Headline / Title</label>
+                    <input type="text" id="articleTitle" placeholder="e.g. Federal Reserve maintains benchmark interest rate...">
+                </div>
+
+                <div class="form-group">
+                    <label for="articleText">Article Body Content</label>
+                    <textarea id="articleText" rows="7" placeholder="Paste full article text, reporting paragraphs, or press release..."></textarea>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" id="submitBtn" class="btn btn-primary">
+                        <i class="fa-solid fa-magnifying-glass-chart"></i> Run AI Classification
+                    </button>
+                    <button type="button" id="clearBtn" class="btn btn-secondary" onclick="clearForm()">
+                        <i class="fa-solid fa-eraser"></i> Clear
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Results Panel -->
+        <section class="card result-card" id="resultSection">
+            <div class="card-header">
+                <h2><i class="fa-solid fa-chart-pie"></i> Verification Results</h2>
+            </div>
+
+            <!-- Empty State Placeholder -->
+            <div id="placeholderState" class="empty-state">
+                <div class="empty-icon"><i class="fa-solid fa-microchip"></i></div>
+                <h3>Ready For Evaluation</h3>
+                <p>Submit an article or pick a preset sample to view real-time deep learning classification, confidence scoring, and token-level explainability.</p>
+            </div>
+
+            <!-- Active Results Content -->
+            <div id="activeResults" style="display: none;">
+                <!-- Verdict Banner -->
+                <div class="verdict-banner" id="verdictBanner">
+                    <div class="verdict-icon" id="verdictIcon">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </div>
+                    <div class="verdict-text-group">
+                        <span class="verdict-label">Classification Verdict</span>
+                        <h3 id="verdictTitle">Real News</h3>
+                    </div>
+                    <div class="confidence-badge" id="confidenceBadge">
+                        99.74% Confidence
+                    </div>
+                </div>
+
+                <!-- Probability Meter -->
+                <div class="meter-card">
+                    <div class="meter-labels">
+                        <span>Authenticity (Real)</span>
+                        <span id="meterPercent">0%</span>
+                        <span>Fake / Sensational</span>
+                    </div>
+                    <div class="progress-track">
+                        <div class="progress-fill" id="progressFill" style="width: 0%;"></div>
+                    </div>
+                </div>
+
+                <!-- Token Saliency Trigger Chips -->
+                <div class="section-block">
+                    <h4><i class="fa-solid fa-highlighter"></i> Top Token Saliency Indicators</h4>
+                    <p class="small-text">Key vocabulary driving the model's decision:</p>
+                    <div class="chips-container" id="chipsContainer"></div>
+                </div>
+
+                <!-- AI Fact-Checking Reasoner Rationale -->
+                <div class="section-block rationale-box">
+                    <h4><i class="fa-solid fa-brain"></i> AI Reasoning & Stylistic Audit</h4>
+                    <p id="rationaleText" class="rationale-content">--</p>
+                </div>
+
+                <!-- Highlighted Text Snippet -->
+                <div class="section-block">
+                    <h4><i class="fa-solid fa-align-left"></i> Annotated Text View</h4>
+                    <div class="annotated-box" id="annotatedBox"></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container footer-content">
+            <p>AI Powered Fake News Detection System • Built with NLP & Deep Learning</p>
+            <p class="stats-line"><i class="fa-solid fa-bolt"></i> 97.49% Benchmark Accuracy on 72k Articles</p>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
