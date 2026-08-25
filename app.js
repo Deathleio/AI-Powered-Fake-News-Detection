@@ -82,46 +82,47 @@ async function analyzeArticle() {
     const submitBtn = document.getElementById("submitBtn");
     submitBtn.disabled = true;
 
-    // Retry loop for Render cold start tolerance
-    const maxAttempts = 3;
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-        submitBtn.innerHTML = attempt === 1
-            ? '<i class="fa-solid fa-spinner fa-spin"></i> Analyzing with AI...'
-            : `<i class="fa-solid fa-spinner fa-spin"></i> Waking Cloud Engine (${attempt}/${maxAttempts})...`;
+    try {
+        const maxAttempts = 3;
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            submitBtn.innerHTML = attempt === 1
+                ? '<i class="fa-solid fa-spinner fa-spin"></i> Analyzing with AI...'
+                : `<i class="fa-solid fa-spinner fa-spin"></i> Waking Cloud Engine (${attempt}/${maxAttempts})...`;
 
-        try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 35000);
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 35000);
 
-            const response = await fetch(`${BACKEND_API_URL}/explain`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ title, text }),
-                signal: controller.signal
-            });
-            clearTimeout(timeoutId);
+                const response = await fetch(`${BACKEND_API_URL}/explain`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ title, text }),
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
 
-            if (!response.ok) {
-                throw new Error(`HTTP Error ${response.status}`);
-            }
+                if (!response.ok) {
+                    throw new Error(`HTTP Error ${response.status}`);
+                }
 
-            const data = await response.json();
-            updateNavStatus(true, "AI Cloud Engine Active");
-            renderResults(data);
-            return; // Success!
+                const data = await response.json();
+                updateNavStatus(true, "AI Cloud Engine Active");
+                renderResults(data);
+                return; // Success!
 
-        } catch (err) {
-            console.warn(`Attempt ${attempt} failed:`, err.message);
-            if (attempt === maxAttempts) {
-                alert(`The AI Cloud engine is taking longer than expected to wake up.\n\nPlease wait 10-15 seconds and try clicking 'Run AI Classification' again.`);
-            } else {
-                await new Promise(r => setTimeout(r, 4000));
+            } catch (err) {
+                console.warn(`Attempt ${attempt} failed:`, err.message);
+                if (attempt === maxAttempts) {
+                    alert(`The AI Cloud engine is taking longer than expected to wake up.\n\nPlease wait 10-15 seconds and try clicking 'Run AI Classification' again.`);
+                } else {
+                    await new Promise(r => setTimeout(r, 4000));
+                }
             }
         }
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fa-solid fa-magnifying-glass-chart"></i> Run AI Classification';
     }
-
-    submitBtn.disabled = false;
-    submitBtn.innerHTML = '<i class="fa-solid fa-magnifying-glass-chart"></i> Run AI Classification';
 }
 
 function renderResults(data) {
