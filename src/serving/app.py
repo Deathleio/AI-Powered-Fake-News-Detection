@@ -1,4 +1,4 @@
-﻿import os
+import os
 import uvicorn
 from fastapi.responses import HTMLResponse
 from src.serving.api import app, NewsArticleRequest, explain_news
@@ -189,8 +189,23 @@ async function analyzeNews() {
 </html>
 """
 
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, HTMLResponse
+from src.serving.api import app, NewsArticleRequest, explain_news
+from src.config import config
+
+frontend_dir = os.path.join(config.BASE_DIR, "frontend")
+if os.path.exists(frontend_dir):
+    app.mount("/static", StaticFiles(directory=frontend_dir), name="static")
+
 @app.get("/", response_class=HTMLResponse)
 def serve_dashboard():
+    index_path = os.path.join(frontend_dir, "index.html")
+    if os.path.exists(index_path):
+        with open(index_path, "r", encoding="utf-8") as f:
+            content = f.read()
+            # rewrite relative paths to static if needed
+            return HTMLResponse(content=content)
     return HTMLResponse(content=HTML_CONTENT)
 
 def launch_server(host="127.0.0.1", port=8000):

@@ -88,9 +88,9 @@ def compute_hybrid_fake_probability(raw_model_fake_proba: float, stylistic_info:
             p_fake = max(p_fake, 0.78 + (risk * 0.15))
         if sensational_score > 0 and p_fake < 0.65:
             p_fake = max(p_fake, 0.72)
-    elif attribution_score >= 0.70 and risk == 0.0:
-        # Strongly attributed mainstream articles
-        p_fake = min(p_fake, 0.25)
+    elif attribution_score >= 0.20 and risk <= 0.20:
+        # Journalistic attribution present with zero/low alarmism
+        p_fake = max(0.05, p_fake - (attribution_score * 0.40))
         
     return float(np.clip(p_fake, 0.0001, 0.9999))
 
@@ -105,7 +105,8 @@ def predict_news(request: NewsArticleRequest):
     if not fused_text:
         raise HTTPException(status_code=400, detail="Both title and text cannot be empty.")
         
-    raw_proba_fake = float(model.predict_proba([fused_text])[0, 0])
+    # Model classes: 0 = Real News, 1 = Fake News
+    raw_proba_fake = float(model.predict_proba([fused_text])[0, 1])
     stylistic_info = extract_stylistic_features(request.title, request.text)
     proba_fake = compute_hybrid_fake_probability(raw_proba_fake, stylistic_info)
     proba_real = 1.0 - proba_fake
@@ -128,7 +129,8 @@ def explain_news(request: NewsArticleRequest):
     if not fused_text:
         raise HTTPException(status_code=400, detail="Both title and text cannot be empty.")
         
-    raw_proba_fake = float(model.predict_proba([fused_text])[0, 0])
+    # Model classes: 0 = Real News, 1 = Fake News
+    raw_proba_fake = float(model.predict_proba([fused_text])[0, 1])
     stylistic_info = extract_stylistic_features(request.title, request.text)
     proba_fake = compute_hybrid_fake_probability(raw_proba_fake, stylistic_info)
     proba_real = 1.0 - proba_fake

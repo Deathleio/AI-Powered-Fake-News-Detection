@@ -1,4 +1,4 @@
-﻿const PRESETS = {
+const PRESETS = {
     grassroots: {
         title: "BREAKING REPORT: Massive Turnout at Nationwide Grassroots Rally for Economic Relief",
         text: "Thousands of citizens gathered across major cities this weekend demanding urgent legislative action on middle-class taxation and community development funding."
@@ -17,8 +17,9 @@
     }
 };
 
-// Permanent Live Backend API Endpoint on Render
-const BACKEND_API_URL = "https://ai-powered-fake-news-detection-bcbb.onrender.com";
+// Backend API URL: Auto-detect local development vs cloud production
+const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.port === '8000' || window.location.protocol === 'file:';
+const BACKEND_API_URL = (isLocal && window.location.protocol !== 'file:') ? window.location.origin : (window.location.protocol === 'file:' ? 'http://127.0.0.1:8000' : 'https://ai-powered-fake-news-detection-bcbb.onrender.com');
 
 document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("analyzeForm").addEventListener("submit", async (e) => {
