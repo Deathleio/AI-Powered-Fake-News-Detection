@@ -1,4 +1,4 @@
-﻿import os
+import os
 import sys
 import time
 import json
@@ -32,8 +32,8 @@ def run_training_pipeline():
     os.makedirs(config.ARTIFACTS_DIR, exist_ok=True)
     
     # 1. Load and prepare stratified data splits
-    print("\n[Step 1/6] Loading and preprocessing dataset...", flush=True)
-    splits = prepare_split_data(title_repeat=2)
+    print("\n[Step 1/6] Loading and preprocessing dataset (1 = Real News, 0 = Fake News)...", flush=True)
+    splits = prepare_split_data(title_repeat=1)
     X_train, y_train = splits['train']
     X_val, y_val = splits['val']
     X_test, y_test = splits['test']
@@ -45,15 +45,15 @@ def run_training_pipeline():
 
     # 2. Vectorize with high-accuracy sublinear TF-IDF
     print("\n[Step 2/6] Fitting high-dimensional sublinear TF-IDF (1-2 N-grams)...", flush=True)
-    vectorizer = build_vectorizer(max_features=50000, ngram_range=(1, 2))
+    vectorizer = build_vectorizer(max_features=45000, ngram_range=(1, 2))
     X_train_vec = vectorizer.fit_transform(X_train)
     X_val_vec = vectorizer.transform(X_val)
     X_test_vec = vectorizer.transform(X_test)
     print(f"TF-IDF matrix shape: {X_train_vec.shape}", flush=True)
 
     # 3. Model 1: Calibrated Passive-Aggressive
-    print("\n[Step 3/6] Training Model 1: Calibrated Passive-Aggressive...", flush=True)
-    base_pa = PassiveAggressiveClassifier(C=0.5, max_iter=1000, random_state=config.RANDOM_SEED)
+    print("\n[Step 3/6] Training Model 1: Calibrated Passive-Aggressive (max_iter=2000)...", flush=True)
+    base_pa = PassiveAggressiveClassifier(C=0.4, max_iter=2000, tol=1e-4, random_state=config.RANDOM_SEED)
     clf_pa = CalibratedClassifierCV(estimator=base_pa, method='sigmoid', cv=3)
     clf_pa.fit(X_train_vec, y_train)
     
@@ -65,9 +65,9 @@ def run_training_pipeline():
     pa_metrics = evaluate_predictions(y_test, pa_test_preds, pa_test_proba, model_name="Calibrated Passive-Aggressive (TF-IDF)")
     print_metrics_summary(pa_metrics)
 
-    # 4. Model 2: Logistic Regression
-    print("\n[Step 4/6] Training Model 2: Logistic Regression (L-BFGS)...", flush=True)
-    clf_lr = LogisticRegression(C=3.0, max_iter=500, solver='lbfgs', random_state=config.RANDOM_SEED)
+    # 4. Model 2: Logistic Regression (L-BFGS, max_iter=1000)
+    print("\n[Step 4/6] Training Model 2: Logistic Regression (C=2.0, max_iter=1000)...", flush=True)
+    clf_lr = LogisticRegression(C=2.0, max_iter=1000, solver='lbfgs', tol=1e-4, random_state=config.RANDOM_SEED)
     clf_lr.fit(X_train_vec, y_train)
     
     lr_pipeline = FakeNewsPipeline(vectorizer, clf_lr)
@@ -78,9 +78,9 @@ def run_training_pipeline():
     lr_metrics = evaluate_predictions(y_test, lr_test_preds, lr_test_proba, model_name="Logistic Regression (TF-IDF)")
     print_metrics_summary(lr_metrics)
 
-    # 5. Model 3: SGD Log-Loss (Fast Logit)
-    print("\n[Step 5/6] Training Model 3: SGD Log-Loss Classifier...", flush=True)
-    clf_sgd = SGDClassifier(loss='log_loss', penalty='l2', alpha=1e-5, max_iter=1000, random_state=config.RANDOM_SEED)
+    # 5. Model 3: SGD Log-Loss (Fast Logit, max_iter=2000)
+    print("\n[Step 5/6] Training Model 3: SGD Log-Loss Classifier (max_iter=2000)...", flush=True)
+    clf_sgd = SGDClassifier(loss='log_loss', penalty='l2', alpha=1e-5, max_iter=2000, tol=1e-4, random_state=config.RANDOM_SEED)
     clf_sgd.fit(X_train_vec, y_train)
     
     sgd_pipeline = FakeNewsPipeline(vectorizer, clf_sgd)

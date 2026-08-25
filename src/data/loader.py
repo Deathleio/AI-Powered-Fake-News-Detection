@@ -30,8 +30,9 @@ def load_raw_dataset(csv_path: str = config.RAW_DATA_PATH) -> pd.DataFrame:
     mask = (df['title'].str.strip() != '') | (df['text'].str.strip() != '')
     df = df[mask].reset_index(drop=True)
     
-    # 4. Standard Convention: 1 = Real News, 0 = Fake News
-    # Raw WELFake dataset has 0 = Real, 1 = Fake. Invert so 1 = Real News and 0 = Fake News.
+    # 4. Standard Target Convention: 1 = Real News, 0 = Fake News
+    # In WELFake CSV: raw 0 = Reuters/Real, raw 1 = Fake/Clickbait.
+    # Invert so: 1 = Real News, 0 = Fake News.
     df['label'] = 1 - df['label'].astype(int)
     return df
 
