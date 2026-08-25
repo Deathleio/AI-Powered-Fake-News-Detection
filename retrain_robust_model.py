@@ -96,8 +96,8 @@ def train_robust_model():
 
     for name, title, text in test_cases:
         fused = fuse_title_body(title, text, title_repeat=1)
-        proba_fake = float(best_pipe.predict_proba([fused])[0, 1])
-        proba_real = float(best_pipe.predict_proba([fused])[0, 0])
+        proba_real = float(best_pipe.predict_proba([fused])[0, 1])
+        proba_fake = float(best_pipe.predict_proba([fused])[0, 0])
         is_fake = proba_fake >= 0.5
         conf = proba_fake if is_fake else proba_real
         verdict = "Fake News" if is_fake else "Real News"

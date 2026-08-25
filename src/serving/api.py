@@ -105,8 +105,9 @@ def predict_news(request: NewsArticleRequest):
     if not fused_text:
         raise HTTPException(status_code=400, detail="Both title and text cannot be empty.")
         
-    # Model classes: 0 = Real News, 1 = Fake News
-    raw_proba_fake = float(model.predict_proba([fused_text])[0, 1])
+    # Model Target Convention: 0 = Fake News, 1 = Real News
+    raw_proba_fake = float(model.predict_proba([fused_text])[0, 0])
+    raw_proba_real = float(model.predict_proba([fused_text])[0, 1])
     stylistic_info = extract_stylistic_features(request.title, request.text)
     proba_fake = compute_hybrid_fake_probability(raw_proba_fake, stylistic_info)
     proba_real = 1.0 - proba_fake
@@ -129,8 +130,9 @@ def explain_news(request: NewsArticleRequest):
     if not fused_text:
         raise HTTPException(status_code=400, detail="Both title and text cannot be empty.")
         
-    # Model classes: 0 = Real News, 1 = Fake News
-    raw_proba_fake = float(model.predict_proba([fused_text])[0, 1])
+    # Model Target Convention: 0 = Fake News, 1 = Real News
+    raw_proba_fake = float(model.predict_proba([fused_text])[0, 0])
+    raw_proba_real = float(model.predict_proba([fused_text])[0, 1])
     stylistic_info = extract_stylistic_features(request.title, request.text)
     proba_fake = compute_hybrid_fake_probability(raw_proba_fake, stylistic_info)
     proba_real = 1.0 - proba_fake

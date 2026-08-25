@@ -41,13 +41,14 @@ def extract_tfidf_word_importance(
         score = val * coefs[idx]
         word_contributions.append((feature_names[idx], float(score)))
         
-    # Positive weights (class 1) indicate FAKE news signals (e.g., sensationalism, clickbait)
-    # Negative weights (class 0) indicate REAL news signals (e.g., standard journalism, accredited reporting)
-    fake_words = sorted([w for w in word_contributions if w[1] > 0], key=lambda x: x[1], reverse=True)[:top_k]
-    real_words = sorted([w for w in word_contributions if w[1] < 0], key=lambda x: x[1])[:top_k]
+    # Model Target Convention: 1 = REAL NEWS, 0 = FAKE NEWS
+    # Positive weights (class 1) indicate REAL news signals (e.g. standard journalism, accredited reporting)
+    # Negative weights (class 0) indicate FAKE news signals (e.g. sensationalism, alarmist framing, clickbait)
+    real_words = sorted([w for w in word_contributions if w[1] > 0], key=lambda x: x[1], reverse=True)[:top_k]
+    fake_words = sorted([w for w in word_contributions if w[1] < 0], key=lambda x: x[1])[:top_k]
     
+    real_indicators = [{"token": w[0], "weight": round(w[1], 4)} for w in real_words]
     fake_indicators = [{"token": w[0], "weight": round(abs(w[1]), 4)} for w in fake_words]
-    real_indicators = [{"token": w[0], "weight": round(abs(w[1]), 4)} for w in real_words]
     
     # Inject detected sensationalism keywords as high-impact fake indicators if not already present
     if sensational_tokens:
