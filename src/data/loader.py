@@ -30,8 +30,10 @@ def load_raw_dataset(csv_path: str = config.RAW_DATA_PATH) -> pd.DataFrame:
     mask = (df['title'].str.strip() != '') | (df['text'].str.strip() != '')
     df = df[mask].reset_index(drop=True)
     
-    # 4. Strict Ground Truth Convention: 1 = Real News, 0 = Fake News (as defined in dataset)
-    df['label'] = df['label'].astype(int)
+    # 4. Standard Target Convention: 1 = Real / Authentic News, 0 = Fake / Disinformation News
+    # In WELFake CSV: raw 0 = Reuters/Verified (Real), raw 1 = Clickbait/Disinformation (Fake).
+    # Invert so: 1 = Real News, 0 = Fake News.
+    df['label'] = 1 - df['label'].astype(int)
     return df
 
 def get_stratified_splits(
