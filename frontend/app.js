@@ -22,10 +22,33 @@ const isLocal = window.location.hostname === 'localhost' || window.location.host
 const BACKEND_API_URL = (isLocal && window.location.protocol !== 'file:') ? window.location.origin : (window.location.protocol === 'file:' ? 'http://127.0.0.1:8000' : 'https://ai-powered-fake-news-detection-bcbb.onrender.com');
 
 document.addEventListener("DOMContentLoaded", () => {
-    document.getElementById("analyzeForm").addEventListener("submit", async (e) => {
+    const form = document.getElementById("analyzeForm");
+    const titleInput = document.getElementById("articleTitle");
+    const textInput = document.getElementById("articleText");
+
+    form.addEventListener("submit", async (e) => {
         e.preventDefault();
         await analyzeArticle();
     });
+
+    const handleInputChange = () => {
+        const title = titleInput.value.trim();
+        const text = textInput.value.trim();
+        if (!title && !text) {
+            if (currentAbortController) {
+                currentAbortController.abort();
+                currentAbortController = null;
+            }
+            document.getElementById("placeholderState").style.display = "block";
+            document.getElementById("activeResults").style.display = "none";
+            resetSubmitButton();
+        } else {
+            resetSubmitButton();
+        }
+    };
+
+    titleInput.addEventListener("input", handleInputChange);
+    textInput.addEventListener("input", handleInputChange);
 
     checkBackendHealth();
     setInterval(checkBackendHealth, 30000);
