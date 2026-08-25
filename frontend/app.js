@@ -33,14 +33,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
 async function checkBackendHealth() {
     try {
-        const response = await fetch(`${BACKEND_API_URL}/health`, { method: "GET" });
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        const response = await fetch(`${BACKEND_API_URL}/health`, { method: "GET", signal: controller.signal });
+        clearTimeout(timeoutId);
         if (response.ok) {
             updateNavStatus(true, "AI Cloud Engine Active");
         } else {
-            updateNavStatus(true, "AI Cloud Engine Active");
+            updateNavStatus(false, "AI Engine Connecting...");
         }
     } catch {
-        updateNavStatus(true, "AI Cloud Engine Active");
+        updateNavStatus(false, "AI Engine Connecting...");
     }
 }
 
@@ -78,29 +81,47 @@ async function analyzeArticle() {
 
     const submitBtn = document.getElementById("submitBtn");
     submitBtn.disabled = true;
-    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Analyzing with AI...';
 
-    try {
-        const response = await fetch(`${BACKEND_API_URL}/explain`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ title, text })
-        });
+    // Retry loop for Render cold start tolerance
+    const maxAttempts = 3;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        submitBtn.innerHTML = attempt === 1
+            ? '<i class="fa-solid fa-spinner fa-spin"></i> Analyzing with AI...'
+            : `<i class="fa-solid fa-spinner fa-spin"></i> Waking Cloud Engine (${attempt}/${maxAttempts})...`;
 
-        if (!response.ok) {
-            throw new Error(`Server responded with status ${response.status}`);
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 35000);
+
+            const response = await fetch(`${BACKEND_API_URL}/explain`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ title, text }),
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                throw new Error(`HTTP Error ${response.status}`);
+            }
+
+            const data = await response.json();
+            updateNavStatus(true, "AI Cloud Engine Active");
+            renderResults(data);
+            return; // Success!
+
+        } catch (err) {
+            console.warn(`Attempt ${attempt} failed:`, err.message);
+            if (attempt === maxAttempts) {
+                alert(`The AI Cloud engine is taking longer than expected to wake up.\n\nPlease wait 10-15 seconds and try clicking 'Run AI Classification' again.`);
+            } else {
+                await new Promise(r => setTimeout(r, 4000));
+            }
         }
-
-        const data = await response.json();
-        updateNavStatus(true, "AI Cloud Engine Active");
-        renderResults(data);
-
-    } catch (err) {
-        alert(`Note: The backend cloud service may take a moment to wake up if idle (Render free tier). Please try again in 10-20 seconds.\n\nError details: ${err.message}`);
-    } finally {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = '<i class="fa-solid fa-magnifying-glass-chart"></i> Run AI Classification';
     }
+
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = '<i class="fa-solid fa-magnifying-glass-chart"></i> Run AI Classification';
 }
 
 function renderResults(data) {
