@@ -56,18 +56,38 @@ function updateNavStatus(isOnline, text) {
     }
 }
 
+let currentAbortController = null;
+
+function resetSubmitButton() {
+    const submitBtn = document.getElementById("submitBtn");
+    if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fa-solid fa-magnifying-glass-chart"></i> Run AI Classification';
+    }
+}
+
 function loadSample(key) {
+    if (currentAbortController) {
+        currentAbortController.abort();
+        currentAbortController = null;
+    }
     if (PRESETS[key]) {
         document.getElementById("articleTitle").value = PRESETS[key].title;
         document.getElementById("articleText").value = PRESETS[key].text;
     }
+    resetSubmitButton();
 }
 
 function clearForm() {
+    if (currentAbortController) {
+        currentAbortController.abort();
+        currentAbortController = null;
+    }
     document.getElementById("articleTitle").value = "";
     document.getElementById("articleText").value = "";
     document.getElementById("placeholderState").style.display = "block";
     document.getElementById("activeResults").style.display = "none";
+    resetSubmitButton();
 }
 
 async function analyzeArticle() {
@@ -90,14 +110,16 @@ async function analyzeArticle() {
                 : `<i class="fa-solid fa-spinner fa-spin"></i> Waking Cloud Engine (${attempt}/${maxAttempts})...`;
 
             try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 35000);
+                currentAbortController = new AbortController();
+                const timeoutId = setTimeout(() => {
+                    if (currentAbortController) currentAbortController.abort();
+                }, 35000);
 
                 const response = await fetch(`${BACKEND_API_URL}/explain`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ title, text }),
-                    signal: controller.signal
+                    signal: currentAbortController.signal
                 });
                 clearTimeout(timeoutId);
 
@@ -111,6 +133,10 @@ async function analyzeArticle() {
                 return; // Success!
 
             } catch (err) {
+                if (err.name === 'AbortError') {
+                    console.log("Analysis cancelled by user.");
+                    return;
+                }
                 console.warn(`Attempt ${attempt} failed:`, err.message);
                 if (attempt === maxAttempts) {
                     alert(`The AI Cloud engine is taking longer than expected to wake up.\n\nPlease wait 10-15 seconds and try clicking 'Run AI Classification' again.`);
@@ -120,8 +146,8 @@ async function analyzeArticle() {
             }
         }
     } finally {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = '<i class="fa-solid fa-magnifying-glass-chart"></i> Run AI Classification';
+        currentAbortController = null;
+        resetSubmitButton();
     }
 }
 
