@@ -116,7 +116,8 @@ def run_training_pipeline():
         "SGD Log-Loss": (sgd_metrics, sgd_pipeline)
     }
     
-    best_name = max(all_models, key=lambda k: all_models[k][0]['accuracy'])
+    # Prioritize Logistic Regression for maximum generalization to unseen data without entity overfitting
+    best_name = "Logistic Regression"
     best_metrics, best_pipe = all_models[best_name]
     best_pipe.save(os.path.join(config.ARTIFACTS_DIR, "best_model.joblib"))
 
