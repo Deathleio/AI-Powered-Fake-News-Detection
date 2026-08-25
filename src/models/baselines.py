@@ -1,4 +1,4 @@
-﻿import os
+import os
 import joblib
 import numpy as np
 from typing import List, Union, Tuple, Optional
@@ -6,12 +6,14 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.pipeline import Pipeline
 from src.config import config
 
-def build_vectorizer(max_features: int = 50000, ngram_range: Tuple[int, int] = (1, 2)) -> TfidfVectorizer:
+def build_vectorizer(max_features: int = 40000, ngram_range: Tuple[int, int] = (1, 2)) -> TfidfVectorizer:
     return TfidfVectorizer(
         ngram_range=ngram_range,
         max_features=max_features,
         sublinear_tf=True,
-        min_df=2,
+        min_df=3,
+        max_df=0.90,
+        stop_words='english',
         lowercase=True
     )
 

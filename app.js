@@ -1,12 +1,4 @@
 const PRESETS = {
-    grassroots: {
-        title: "BREAKING REPORT: Massive Turnout at Nationwide Grassroots Rally for Economic Relief",
-        text: "Thousands of citizens gathered across major cities this weekend demanding urgent legislative action on middle-class taxation and community development funding."
-    },
-    investigation: {
-        title: "WATCH: Special Report Highlights Key Evidence in Campaign Spending Investigation",
-        text: "An exclusive investigative piece reveals deep details on campaign fund allocations and financial disclosures filed ahead of the upcoming primary vote."
-    },
     diplomacy: {
         title: "European Parliament Rejects Brexit Proposal Citing Citizen Rights Concerns",
         text: "The European Parliament said on Tuesday that British Prime Minister proposals for European citizens living in Britain fell short and would create a second class of citizens."
@@ -14,6 +6,14 @@ const PRESETS = {
     politics: {
         title: "Schumer calls on Trump to appoint official to oversee disaster recovery effort",
         text: "Senate Democratic Leader Chuck Schumer called on President Donald Trump to appoint a single official to manage the recovery effort following the recent hurricane damage."
+    },
+    conspiracy: {
+        title: "SHOCKING BOMBSHELL: Secret Globalist Plot Unveiled To Ban All Cash By Next Week [VIDEO]",
+        text: "UNBELIEVABLE! Top secret government insiders have leaked conclusive proof that corrupt elites are secretly orchestrating a total blackout to confiscate private savings. Mainstream media refuses to report this terrifying scheme! Watch the explosive footage before it gets deleted!"
+    },
+    satire: {
+        title: "THE WORLD IS ON FIRE",
+        text: "AUSTRALIA BUSHFIRE HAS TAKEN THE LIFE OF TRUMP WHO WAS DANCING WITH NETANYAHU"
     }
 };
 
