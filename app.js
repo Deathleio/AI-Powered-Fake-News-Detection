@@ -1,22 +1,3 @@
-const PRESETS = {
-    diplomacy: {
-        title: "European Parliament Rejects Brexit Proposal Citing Citizen Rights Concerns",
-        text: "The European Parliament said on Tuesday that British Prime Minister proposals for European citizens living in Britain fell short and would create a second class of citizens."
-    },
-    politics: {
-        title: "Schumer calls on Trump to appoint official to oversee disaster recovery effort",
-        text: "Senate Democratic Leader Chuck Schumer called on President Donald Trump to appoint a single official to manage the recovery effort following the recent hurricane damage."
-    },
-    conspiracy: {
-        title: "SHOCKING BOMBSHELL: Secret Globalist Plot Unveiled To Ban All Cash By Next Week [VIDEO]",
-        text: "UNBELIEVABLE! Top secret government insiders have leaked conclusive proof that corrupt elites are secretly orchestrating a total blackout to confiscate private savings. Mainstream media refuses to report this terrifying scheme! Watch the explosive footage before it gets deleted!"
-    },
-    satire: {
-        title: "THE WORLD IS ON FIRE",
-        text: "AUSTRALIA BUSHFIRE HAS TAKEN THE LIFE OF TRUMP WHO WAS DANCING WITH NETANYAHU"
-    }
-};
-
 // Backend API URL: Auto-detect local development vs cloud production
 const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.port === '8000' || window.location.protocol === 'file:';
 const BACKEND_API_URL = (isLocal && window.location.protocol !== 'file:') ? window.location.origin : (window.location.protocol === 'file:' ? 'http://127.0.0.1:8000' : 'https://ai-powered-fake-news-detection-bcbb.onrender.com');
@@ -87,18 +68,6 @@ function resetSubmitButton() {
         submitBtn.disabled = false;
         submitBtn.innerHTML = '<i class="fa-solid fa-magnifying-glass-chart"></i> Run AI Classification';
     }
-}
-
-function loadSample(key) {
-    if (currentAbortController) {
-        currentAbortController.abort();
-        currentAbortController = null;
-    }
-    if (PRESETS[key]) {
-        document.getElementById("articleTitle").value = PRESETS[key].title;
-        document.getElementById("articleText").value = PRESETS[key].text;
-    }
-    resetSubmitButton();
 }
 
 function clearForm() {
