@@ -6,6 +6,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 import numpy as np
+import scipy.sparse as sp
 
 if hasattr(sys.stdout, 'reconfigure'):
     try:
@@ -18,7 +19,7 @@ from sklearn.calibration import CalibratedClassifierCV
 
 from src.config import config
 from src.data.loader import prepare_split_data
-from src.models.baselines import build_vectorizer, FakeNewsPipeline
+from src.models.baselines import build_vectorizer, build_word_vectorizer, build_char_vectorizer, FakeNewsPipeline
 from src.models.lstm_attention import TextVocabulary, NewsTorchDataset, BiLSTMAttentionClassifier
 from src.models.ensemble import StackingEnsembleModel
 from src.evaluation.evaluator import evaluate_predictions, print_metrics_summary
@@ -33,62 +34,85 @@ def run_training_pipeline():
     
     # 1. Load and prepare stratified data splits
     print("\n[Step 1/6] Loading and preprocessing dataset (1 = Real News, 0 = Fake News)...", flush=True)
-    splits = prepare_split_data(title_repeat=1)
+    splits = prepare_split_data(title_repeat=2)
     X_train, y_train = splits['train']
     X_val, y_val = splits['val']
     X_test, y_test = splits['test']
     
+    # 1a. Also load raw title-only strings for char n-gram vectorizer (fast, titles are ~10 words)
+    from src.data.loader import load_raw_dataset, get_stratified_splits
+    import scipy.sparse as sp
+    df_raw = load_raw_dataset()
+    raw_splits = get_stratified_splits(df_raw)
+    titles_train = raw_splits['train']['title'].fillna('').tolist()
+    titles_val   = raw_splits['val']['title'].fillna('').tolist()
+    titles_test  = raw_splits['test']['title'].fillna('').tolist()
+
     print(f"Dataset Partitions:", flush=True)
     print(f"  Train: {len(X_train)} samples", flush=True)
     print(f"  Val:   {len(X_val)} samples", flush=True)
     print(f"  Test:  {len(X_test)} samples (Unseen Holdout)", flush=True)
 
-    # 2. Vectorize with high-accuracy sublinear TF-IDF
-    print("\n[Step 2/6] Fitting high-dimensional sublinear TF-IDF (1-2 N-grams)...", flush=True)
-    vectorizer = build_vectorizer(max_features=50000, ngram_range=(1, 2))
-    X_train_vec = vectorizer.fit_transform(X_train)
-    X_val_vec = vectorizer.transform(X_val)
-    X_test_vec = vectorizer.transform(X_test)
-    print(f"TF-IDF matrix shape: {X_train_vec.shape}", flush=True)
+    # 2. Fit dual TF-IDF vectorizers:
+    #    - Word 1-2-gram on full fused text (50k features) — topic/entity signals
+    #    - Char 3-4-gram on title only (10k features) — fast stylistic signals
+    print("\n[Step 2/6] Fitting dual TF-IDF: word (1-2-gram, 50k on body) + char (3-4-gram, 10k on title only)...", flush=True)
+    word_vec = build_word_vectorizer(max_features=50000, ngram_range=(1, 2))
+    char_vec = build_char_vectorizer(max_features=10000)
+
+    X_train_word = word_vec.fit_transform(X_train)
+    X_train_char = char_vec.fit_transform(titles_train)
+    X_train_vec = sp.hstack([X_train_word, X_train_char], format='csr')
+
+    X_val_word = word_vec.transform(X_val)
+    X_val_char = char_vec.transform(titles_val)
+    X_val_vec = sp.hstack([X_val_word, X_val_char], format='csr')
+
+    X_test_word = word_vec.transform(X_test)
+    X_test_char = char_vec.transform(titles_test)
+    X_test_vec = sp.hstack([X_test_word, X_test_char], format='csr')
+
+    print(f"Combined feature matrix shape: {X_train_vec.shape}", flush=True)
+
 
     # 3. Model 1: Calibrated Passive-Aggressive
     print("\n[Step 3/6] Training Model 1: Calibrated Passive-Aggressive (max_iter=2500)...", flush=True)
     base_pa = PassiveAggressiveClassifier(C=0.5, max_iter=2500, tol=1e-4, random_state=config.RANDOM_SEED)
     clf_pa = CalibratedClassifierCV(estimator=base_pa, method='sigmoid', cv=3)
     clf_pa.fit(X_train_vec, y_train)
-    
-    pa_pipeline = FakeNewsPipeline(vectorizer, clf_pa)
+
+    pa_pipeline = FakeNewsPipeline(word_vec, clf_pa, char_vectorizer=char_vec)
     pa_pipeline.save(os.path.join(config.ARTIFACTS_DIR, "model_passive_aggressive.joblib"))
-    
+
     pa_test_preds = clf_pa.predict(X_test_vec)
     pa_test_proba = clf_pa.predict_proba(X_test_vec)[:, 1]
-    pa_metrics = evaluate_predictions(y_test, pa_test_preds, pa_test_proba, model_name="Calibrated Passive-Aggressive (TF-IDF)")
+    pa_metrics = evaluate_predictions(y_test, pa_test_preds, pa_test_proba, model_name="Calibrated Passive-Aggressive (Word+Char TF-IDF)")
     print_metrics_summary(pa_metrics)
 
     # 4. Model 2: Logistic Regression (L-BFGS, max_iter=2500)
     print("\n[Step 4/6] Training Model 2: Logistic Regression (C=2.5, max_iter=2500)...", flush=True)
     clf_lr = LogisticRegression(C=2.5, max_iter=2500, solver='lbfgs', tol=1e-4, random_state=config.RANDOM_SEED)
     clf_lr.fit(X_train_vec, y_train)
-    
-    lr_pipeline = FakeNewsPipeline(vectorizer, clf_lr)
+
+    lr_pipeline = FakeNewsPipeline(word_vec, clf_lr, char_vectorizer=char_vec)
     lr_pipeline.save(os.path.join(config.ARTIFACTS_DIR, "model_logistic_regression.joblib"))
-    
+
     lr_test_preds = clf_lr.predict(X_test_vec)
     lr_test_proba = clf_lr.predict_proba(X_test_vec)[:, 1]
-    lr_metrics = evaluate_predictions(y_test, lr_test_preds, lr_test_proba, model_name="Logistic Regression (TF-IDF)")
+    lr_metrics = evaluate_predictions(y_test, lr_test_preds, lr_test_proba, model_name="Logistic Regression (Word+Char TF-IDF)")
     print_metrics_summary(lr_metrics)
 
-    # 5. Model 3: SGD Log-Loss (Fast Logit, max_iter=2500)
+    # 5. Model 3: SGD Log-Loss (max_iter=2500)
     print("\n[Step 5/6] Training Model 3: SGD Log-Loss Classifier (max_iter=2500)...", flush=True)
     clf_sgd = SGDClassifier(loss='log_loss', penalty='l2', alpha=1e-5, max_iter=2500, tol=1e-4, random_state=config.RANDOM_SEED)
     clf_sgd.fit(X_train_vec, y_train)
-    
-    sgd_pipeline = FakeNewsPipeline(vectorizer, clf_sgd)
+
+    sgd_pipeline = FakeNewsPipeline(word_vec, clf_sgd, char_vectorizer=char_vec)
     sgd_pipeline.save(os.path.join(config.ARTIFACTS_DIR, "model_sgd_log.joblib"))
-    
+
     sgd_test_preds = clf_sgd.predict(X_test_vec)
     sgd_test_proba = clf_sgd.predict_proba(X_test_vec)[:, 1]
-    sgd_metrics = evaluate_predictions(y_test, sgd_test_preds, sgd_test_proba, model_name="SGD Log-Loss (TF-IDF)")
+    sgd_metrics = evaluate_predictions(y_test, sgd_test_preds, sgd_test_proba, model_name="SGD Log-Loss (Word+Char TF-IDF)")
     print_metrics_summary(sgd_metrics)
 
     # 6. Model 4: Stacking & Soft-Voting Meta-Ensemble
@@ -96,14 +120,14 @@ def run_training_pipeline():
     pa_val_proba = clf_pa.predict_proba(X_val_vec)[:, 1]
     lr_val_proba = clf_lr.predict_proba(X_val_vec)[:, 1]
     sgd_val_proba = clf_sgd.predict_proba(X_val_vec)[:, 1]
-    
+
     val_stack = np.column_stack([pa_val_proba, lr_val_proba, sgd_val_proba])
     test_stack = np.column_stack([pa_test_proba, lr_test_proba, sgd_test_proba])
-    
+
     ensemble = StackingEnsembleModel(weights=[0.45, 0.45, 0.10])
     ensemble.fit_meta_learner(val_stack, y_val)
     ensemble.save(os.path.join(config.ARTIFACTS_DIR, "stacking_ensemble.joblib"))
-    
+
     ensemble_test_proba = ensemble.predict_meta(test_stack)
     ensemble_test_preds = (ensemble_test_proba >= 0.5).astype(int)
     ensemble_metrics = evaluate_predictions(y_test, ensemble_test_preds, ensemble_test_proba, model_name="Stacking Meta-Ensemble (PA + LR + SGD)")
@@ -115,7 +139,7 @@ def run_training_pipeline():
         "Logistic Regression": (lr_metrics, lr_pipeline),
         "SGD Log-Loss": (sgd_metrics, sgd_pipeline)
     }
-    
+
     best_name = max(all_models, key=lambda k: all_models[k][0]['accuracy'])
     best_metrics, best_pipe = all_models[best_name]
     best_pipe.save(os.path.join(config.ARTIFACTS_DIR, "best_model.joblib"))
