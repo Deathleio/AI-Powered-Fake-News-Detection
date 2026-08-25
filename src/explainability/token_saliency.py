@@ -1,11 +1,12 @@
-﻿import re
+import re
 import numpy as np
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Optional
 
 def extract_tfidf_word_importance(
     text: str,
     pipeline,
-    top_k: int = 10
+    top_k: int = 10,
+    sensational_tokens: Optional[List[str]] = None
 ) -> Dict[str, Any]:
     """
     Extracts high-impact words driving classification.
@@ -43,9 +44,18 @@ def extract_tfidf_word_importance(
     real_words = sorted([w for w in word_contributions if w[1] > 0], key=lambda x: x[1], reverse=True)[:top_k]
     fake_words = sorted([w for w in word_contributions if w[1] < 0], key=lambda x: x[1])[:top_k]
     
+    fake_indicators = [{"token": w[0], "weight": round(abs(w[1]), 4)} for w in fake_words]
+    
+    # Inject detected sensationalism keywords as high-impact fake indicators if not already present
+    if sensational_tokens:
+        existing_tokens = {item['token'].lower() for item in fake_indicators}
+        for st in sensational_tokens:
+            if st.lower() not in existing_tokens:
+                fake_indicators.insert(0, {"token": st.lower(), "weight": 0.4500})
+                
     return {
         "real_indicators": [{"token": w[0], "weight": round(w[1], 4)} for w in real_words],
-        "fake_indicators": [{"token": w[0], "weight": round(abs(w[1]), 4)} for w in fake_words]
+        "fake_indicators": fake_indicators[:top_k]
     }
 
 def generate_highlighted_html(text: str, fake_tokens: List[str], real_tokens: List[str]) -> str:

@@ -1,4 +1,4 @@
-﻿import os
+import os
 import json
 from typing import Dict, Any, Optional
 
@@ -15,7 +15,8 @@ class LLMFactCheckReasoner:
         text_snippet: str,
         fake_probability: float,
         salient_fake_words: list,
-        salient_real_words: list
+        salient_real_words: list,
+        stylistic_info: Optional[dict] = None
     ) -> Dict[str, Any]:
         """
         Generates structured, token-efficient reasoning for the prediction.
@@ -24,17 +25,31 @@ class LLMFactCheckReasoner:
         confidence = fake_probability if is_fake else (1.0 - fake_probability)
         verdict = "Likely Fake / Sensationalized" if is_fake else "Likely Real / Mainstream"
         
-        # High confidence reasoning generation
+        reasons = []
         if is_fake:
-            reasons = [
-                f"High-frequency sensational or hyperpartisan lexical triggers detected: {', '.join([w['token'] for w in salient_fake_words[:4]])}." if salient_fake_words else "Elevated sensational markers detected in headline.",
-                "Stylistic tone exhibits informal/alarmist framing characteristic of clickbait news."
-            ]
+            if stylistic_info and (stylistic_info.get("is_all_caps_title") or stylistic_info.get("is_all_caps_body")):
+                reasons.append("Extreme capitalization (all-caps shouting) identified, characteristic of sensationalist / clickbait claims.")
+            if stylistic_info and stylistic_info.get("sensational_keywords"):
+                reasons.append(f"Sensationalist / alarmist triggers detected: {', '.join(stylistic_info['sensational_keywords'][:3])}.")
+            elif salient_fake_words:
+                reasons.append(f"High-frequency sensational or hyperpartisan lexical triggers detected: {', '.join([w['token'] for w in salient_fake_words[:4]])}.")
+            else:
+                reasons.append("Elevated sensational markers and lack of corroborative journalistic framing detected.")
+                
+            if stylistic_info and stylistic_info.get("attribution_score", 0) == 0:
+                reasons.append("Zero verified journalistic attribution, institutional source citations, or official corroboration found.")
+            else:
+                reasons.append("Stylistic tone exhibits informal/alarmist framing characteristic of unverified news.")
         else:
-            reasons = [
-                f"Factual reporting vocabulary and standard journalistic tone identified: {', '.join([w['token'] for w in salient_real_words[:4]])}." if salient_real_words else "Attribution markers align with standard news reporting.",
-                "Syntactic structure adheres to objective narrative standards."
-            ]
+            if salient_real_words:
+                reasons.append(f"Factual reporting vocabulary and standard journalistic tone identified: {', '.join([w['token'] for w in salient_real_words[:4]])}.")
+            else:
+                reasons.append("Attribution markers align with standard news reporting.")
+                
+            if stylistic_info and stylistic_info.get("attribution_score", 0) > 0:
+                reasons.append("Formal journalistic attribution markers and objective syntax verified.")
+            else:
+                reasons.append("Syntactic structure adheres to objective narrative standards.")
             
         summary = {
             "verdict": verdict,

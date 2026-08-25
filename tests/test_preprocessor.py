@@ -1,6 +1,6 @@
-﻿import unittest
+import unittest
 import pandas as pd
-from src.data.preprocessor import sanitize_wire_leakage, fuse_title_body, TextPreprocessor
+from src.data.preprocessor import sanitize_wire_leakage, fuse_title_body, TextPreprocessor, extract_stylistic_features
 
 class TestPreprocessor(unittest.TestCase):
     def test_sanitize_wire_leakage(self):
@@ -36,6 +36,26 @@ class TestPreprocessor(unittest.TestCase):
         self.assertEqual(len(res), 2)
         self.assertIn("Test Title 1", res[0])
         self.assertIn("Test Body 2", res[1])
+
+    def test_extract_stylistic_features(self):
+        # Test all-caps and sensationalist alarm
+        features = extract_stylistic_features(
+            "THE WORLD IS ON FIRE",
+            "AUSTRALIA BUSHFIRE HAS TAKEN THE LIFE OF TRUMP WHO WAS DANCING WITH NETANYAHU"
+        )
+        self.assertTrue(features["is_all_caps_title"])
+        self.assertTrue(features["is_all_caps_body"])
+        self.assertGreater(features["stylistic_fake_risk"], 0.6)
+        self.assertIn("world is on fire", [k.lower() for k in features["sensational_keywords"]])
+
+        # Test authentic news with journalistic attribution
+        real_features = extract_stylistic_features(
+            "Federal Reserve Holds Benchmark Interest Rates Steady",
+            "The Federal Reserve announced on Wednesday that benchmark rates will remain steady, according to official statements."
+        )
+        self.assertFalse(real_features["is_all_caps_title"])
+        self.assertGreater(real_features["attribution_score"], 0)
+        self.assertLess(real_features["stylistic_fake_risk"], 0.2)
 
 if __name__ == '__main__':
     unittest.main()
