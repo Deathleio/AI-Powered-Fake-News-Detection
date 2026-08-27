@@ -6,6 +6,21 @@ let currentActiveTab = 'text';
 let lastAnalyzedResult = null;
 let currentAbortController = null;
 
+const DEMO_PRESETS = {
+    nasa: {
+        title: "NASA James Webb Space Telescope Detects Water Vapor in Planet-Forming Zone",
+        text: "Astronomers using NASA's James Webb Space Telescope have identified clear spectroscopic signatures of water vapor within the inner disk of a young stellar system. The findings, published in the journal Nature, suggest that rocky planets forming in this region may have access to water early in their development."
+    },
+    cure: {
+        title: "MIRACLE CURE: Secret Ancient Root Cures All Disease Overnight [MUST SEE]",
+        text: "Doctors are STUNNED and pharmaceutical executives are in a panic! This 100% natural ancient herbal remedy is being suppressed because it completely cures every disease in just 24 hours. The medical establishment does not want you to know the truth!"
+    },
+    fed: {
+        title: "Federal Reserve Holds Benchmark Interest Rates Steady Amid Stable Economic Growth",
+        text: "The Federal Reserve announced on Wednesday that it will maintain its benchmark interest rate within the current target range following a unanimous vote by the Federal Open Market Committee. Central bank officials cited continuing job growth and steady consumer spending in their official statement."
+    }
+};
+
 document.addEventListener("DOMContentLoaded", () => {
     const form = document.getElementById("analyzeForm");
     const titleInput = document.getElementById("articleTitle");
@@ -45,6 +60,16 @@ document.addEventListener("DOMContentLoaded", () => {
     setInterval(checkBackendHealth, 30000);
 });
 
+function loadSample(key) {
+    const sample = DEMO_PRESETS[key];
+    if (!sample) return;
+    
+    switchInputTab('text');
+    document.getElementById("articleTitle").value = sample.title;
+    document.getElementById("articleText").value = sample.text;
+    analyzeArticle();
+}
+
 function switchInputTab(tab) {
     currentActiveTab = tab;
     const tabText = document.getElementById("tabText");
@@ -72,7 +97,7 @@ async function checkBackendHealth() {
         const response = await fetch(`${BACKEND_API_URL}/health`, { method: "GET", signal: controller.signal });
         clearTimeout(timeoutId);
         if (response.ok) {
-            updateNavStatus(true, "Enterprise Cloud Active");
+            updateNavStatus(true, "AI Fact-Checker Ready");
         } else {
             updateNavStatus(false, "Connecting to Cloud...");
         }
@@ -94,7 +119,7 @@ function resetSubmitButton() {
     const submitBtn = document.getElementById("submitBtn");
     if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Run Deep Verification';
+        submitBtn.innerHTML = '<i class="fa-solid fa-shield-check"></i> Verify This News';
     }
 }
 
@@ -126,7 +151,7 @@ async function analyzeArticle() {
         if (currentActiveTab === 'url') {
             const url = document.getElementById("articleUrl").value.trim();
             if (!url) {
-                alert("Please enter a valid news URL.");
+                alert("Please enter a news article web link (URL).");
                 resetSubmitButton();
                 return;
             }
@@ -136,7 +161,7 @@ async function analyzeArticle() {
             const title = document.getElementById("articleTitle").value.trim();
             const text = document.getElementById("articleText").value.trim();
             if (!title && !text) {
-                alert("Please enter a headline or article body text to analyze.");
+                alert("Please enter a news headline or article story to check.");
                 resetSubmitButton();
                 return;
             }
@@ -146,8 +171,8 @@ async function analyzeArticle() {
         const maxAttempts = 3;
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
             submitBtn.innerHTML = attempt === 1
-                ? '<i class="fa-solid fa-spinner fa-spin"></i> Analyzing Veracity...'
-                : `<i class="fa-solid fa-spinner fa-spin"></i> Waking Engine (${attempt}/${maxAttempts})...`;
+                ? '<i class="fa-solid fa-spinner fa-spin"></i> Checking Facts & Credibility...'
+                : `<i class="fa-solid fa-spinner fa-spin"></i> Waking AI Engine (${attempt}/${maxAttempts})...`;
 
             try {
                 currentAbortController = new AbortController();
@@ -170,7 +195,7 @@ async function analyzeArticle() {
 
                 const data = await response.json();
                 lastAnalyzedResult = data;
-                updateNavStatus(true, "Enterprise Cloud Active");
+                updateNavStatus(true, "AI Fact-Checker Ready");
                 renderResults(data);
                 return;
 
@@ -181,7 +206,7 @@ async function analyzeArticle() {
                 }
                 console.warn(`Attempt ${attempt} failed:`, err.message);
                 if (attempt === maxAttempts) {
-                    alert(`Engine response: ${err.message || 'Server timeout. Please try again.'}`);
+                    alert(`We could not complete the check: ${err.message || 'Server timeout. Please try again.'}`);
                 } else {
                     await new Promise(r => setTimeout(r, 4000));
                 }
@@ -204,39 +229,35 @@ function renderResults(data) {
     const icon = document.getElementById("verdictIcon");
     const title = document.getElementById("verdictTitle");
     const trustScoreNum = document.getElementById("trustScoreNum");
-    const progressFill = document.getElementById("progressFill");
-    const meterPercent = document.getElementById("meterPercent");
+    const scoreLabelText = document.getElementById("scoreLabelText");
 
     banner.className = `verdict-banner ${isFake ? "fake" : "real"}`;
     icon.innerHTML = isFake 
         ? '<i class="fa-solid fa-triangle-exclamation"></i>' 
         : '<i class="fa-solid fa-circle-check"></i>';
-    title.innerText = isFake ? "Fake News / Disinformation" : "Real / Authentic Journalism";
+        
+    title.innerText = isFake ? "Warning: Likely Fake or Misleading" : "Verified: Looks Real & Credible";
 
-    const trustScore = data.veritas_score !== undefined ? data.veritas_score : (isFake ? 15 : 95);
+    const trustScore = data.veritas_score !== undefined ? data.veritas_score : (isFake ? 12 : 95);
     trustScoreNum.innerText = trustScore;
-    trustScoreNum.style.color = isFake ? "var(--fake-accent)" : "var(--real-accent)";
+    scoreLabelText.innerText = isFake ? "High Risk Rating" : "High Credibility";
 
-    progressFill.className = `progress-fill ${isFake ? "fake" : "real"}`;
-    progressFill.style.width = `${data.confidence_percentage}%`;
-    meterPercent.innerText = `${isFake ? "Fake Probability" : "Authenticity"}: ${data.confidence_percentage}%`;
-
-    // Publisher & Domain Credibility
+    // Publisher & Source Reputation
     const pubCard = document.getElementById("publisherCard");
-    if (data.domain_credibility) {
+    if (data.domain_credibility && data.domain_credibility.domain !== "Unknown Source") {
         pubCard.style.display = "block";
         document.getElementById("pubDomain").innerText = data.domain_credibility.domain;
-        document.getElementById("pubType").innerText = data.domain_credibility.publisher_type;
-        document.getElementById("pubAuthority").innerText = `${data.domain_credibility.authority_score}/100`;
+        document.getElementById("pubType").innerText = "Publisher Check";
+        document.getElementById("pubAuthority").innerText = data.domain_credibility.publisher_type;
     } else {
         pubCard.style.display = "none";
     }
 
-    // AI Reasoning & Live Encyclopedic Grounding
+    // AI Reasoning & Live Knowledge
     const rationaleText = document.getElementById("rationaleText");
     rationaleText.innerText = data.llm_reasoning && data.llm_reasoning.rationale 
         ? data.llm_reasoning.rationale 
-        : "Evaluated across multi-domain neural stylometry and contextual feature representations.";
+        : "Evaluation based on writing style, source attribution, and factual patterns.";
 
     const citationsDiv = document.getElementById("knowledgeCitations");
     citationsDiv.innerHTML = "";
@@ -244,12 +265,12 @@ function renderResults(data) {
         data.llm_reasoning.knowledge_corroboration.forEach(k => {
             const chip = document.createElement("div");
             chip.className = "citation-chip";
-            chip.innerHTML = `<i class="fa-solid fa-book-bookmark"></i> <div><strong>${k.title}:</strong> ${k.snippet}</div>`;
+            chip.innerHTML = `<i class="fa-solid fa-book-open"></i> <div><strong>${k.title}:</strong> ${k.snippet}</div>`;
             citationsDiv.appendChild(chip);
         });
     }
 
-    // Claim-by-Claim Forensic Matrix
+    // Sentence-by-Sentence Breakdown
     const claimsBlock = document.getElementById("claimsBlock");
     const claimsList = document.getElementById("claimsList");
     claimsList.innerHTML = "";
@@ -260,7 +281,7 @@ function renderResults(data) {
             item.className = `claim-item ${c.tag_class}`;
             item.innerHTML = `
                 <div class="claim-top">
-                    <span class="claim-tag ${c.tag_class}">Claim #${c.claim_id}: ${c.category}</span>
+                    <span class="claim-tag ${c.tag_class}">${c.category}</span>
                     <span class="small-text">${c.risk_level}</span>
                 </div>
                 <p>"${c.text}"</p>
@@ -272,7 +293,7 @@ function renderResults(data) {
         claimsBlock.style.display = "none";
     }
 
-    // Top Salient Token Chips
+    // Top Salient Keywords (clean labels without math)
     const chipsContainer = document.getElementById("chipsContainer");
     chipsContainer.innerHTML = "";
     const indicators = isFake ? data.fake_indicators : data.real_indicators;
@@ -280,16 +301,16 @@ function renderResults(data) {
         indicators.forEach(item => {
             const chip = document.createElement("span");
             chip.className = `chip ${isFake ? "fake" : "real"}`;
-            chip.innerHTML = `<i class="fa-solid fa-${isFake ? 'flag' : 'check'}"></i> ${item.token} <strong>(+${item.weight})</strong>`;
+            chip.innerHTML = `<i class="fa-solid fa-${isFake ? 'flag' : 'check'}"></i> ${item.token}`;
             chipsContainer.appendChild(chip);
         });
     } else {
-        chipsContainer.innerHTML = '<span class="small-text">Balanced stylistic syntax.</span>';
+        chipsContainer.innerHTML = '<span class="small-text">No unusual keyword triggers detected.</span>';
     }
 
     // Highlighted Text View
     const annotatedBox = document.getElementById("annotatedBox");
-    annotatedBox.innerHTML = data.highlighted_html || "<p>Annotation rendered.</p>";
+    annotatedBox.innerHTML = data.highlighted_html || "<p>Annotated story.</p>";
 }
 
 function exportForensicReport() {
@@ -297,7 +318,7 @@ function exportForensicReport() {
     const jsonStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(lastAnalyzedResult, null, 2));
     const dlAnchor = document.createElement('a');
     dlAnchor.setAttribute("href", jsonStr);
-    dlAnchor.setAttribute("download", `VeritasAI_Forensic_Report_${Date.now()}.json`);
+    dlAnchor.setAttribute("download", `Veritas_Verification_Report_${Date.now()}.json`);
     document.body.appendChild(dlAnchor);
     dlAnchor.click();
     dlAnchor.remove();
@@ -329,7 +350,7 @@ async function submitFeedbackForm() {
                 notes: notes
             })
         });
-        alert("Thank you! Feedback recorded for model active learning retraining.");
+        alert("Thank you! Your feedback helps our AI get smarter.");
         closeFeedbackModal();
     } catch {
         alert("Failed to submit feedback.");
