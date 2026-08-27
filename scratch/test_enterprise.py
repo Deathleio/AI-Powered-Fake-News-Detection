@@ -20,7 +20,8 @@ print("=================================================================\n")
 # 1. Test Text Analysis with Claims Breakdown and Trust Score
 req1 = NewsArticleRequest(
     title="NASA James Webb Space Telescope Detects Water Vapor in Rocky Planet Formation Zone",
-    text="Astronomers using NASAs James Webb Space Telescope have identified clear spectroscopic signatures of water vapor within the inner disk of a young stellar system. The findings, published in the journal Nature, suggest that rocky exoplanets forming in this region may have access to a substantial reservoir of water early in their development. Officials confirmed the results on Thursday."
+    text="Astronomers using NASAs James Webb Space Telescope have identified clear spectroscopic signatures of water vapor within the inner disk of a young stellar system. The findings, published in the journal Nature, suggest that rocky exoplanets forming in this region may have access to a substantial reservoir of water early in their development. Officials confirmed the results on Thursday.",
+    source_url="https://www.nature.com"
 )
 res1 = explain_news(req1)
 print(f"[TEST 1: Article Analysis]")

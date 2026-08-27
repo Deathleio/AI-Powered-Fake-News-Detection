@@ -70,7 +70,11 @@ class LLMFactCheckReasoner:
             if stylistic_info and stylistic_info.get("sensational_keywords"):
                 reasons.append(f"Sensationalist / alarmist triggers detected: {', '.join(stylistic_info['sensational_keywords'][:3])}.")
             elif salient_fake_words:
-                reasons.append(f"High-frequency sensational or hyperpartisan lexical triggers detected: {', '.join([w['token'] for w in salient_fake_words[:4]])}.")
+                sensational_subset = [w['token'] for w in salient_fake_words if w.get('is_sensational')]
+                if sensational_subset:
+                    reasons.append(f"Sensational clickbait patterns detected: {', '.join(sensational_subset[:3])}.")
+                else:
+                    reasons.append("Elevated sensational markers and lack of corroborative journalistic framing detected.")
             else:
                 reasons.append("Elevated sensational markers and lack of corroborative journalistic framing detected.")
                 

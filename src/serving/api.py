@@ -93,6 +93,7 @@ def compute_hybrid_fake_probability(raw_model_fake_proba: float, stylistic_info:
     risk = stylistic_info.get("stylistic_fake_risk", 0.0)
     is_all_caps = stylistic_info.get("is_all_caps_title", False) or stylistic_info.get("is_all_caps_body", False)
     sensational_score = stylistic_info.get("sensational_score", 0.0)
+    sensational_words = stylistic_info.get("sensational_keywords", [])
     attribution_score = stylistic_info.get("attribution_score", 0.0)
     exclamation_density = stylistic_info.get("exclamation_density", 0.0)
 
@@ -113,8 +114,12 @@ def compute_hybrid_fake_probability(raw_model_fake_proba: float, stylistic_info:
         p_fake = min(p_fake * 0.30, 0.18)
     elif attribution_score >= 0.20 and risk <= 0.15 and p_fake > 0.30:
         p_fake = max(0.08, p_fake - attribution_score * 0.45)
+    # 3. Standard neutral journalistic narrative with ZERO sensationalism and clean syntax
+    elif risk == 0.0 and not sensational_words and not is_all_caps and exclamation_density == 0.0:
+        if p_fake < 0.72:
+            p_fake = min(p_fake * 0.35, 0.18)
 
-    # 3. Domain registry weight
+    # 4. Domain registry weight
     if domain_info:
         if domain_info.get("is_satire"):
             p_fake = max(0.85, p_fake)
@@ -169,7 +174,7 @@ def explain_news(request: NewsArticleRequest):
         raise HTTPException(status_code=400, detail="Both title and text cannot be empty.")
 
     title_only = [str(request.title) if request.title else ""]
-    domain_info = evaluate_publisher_credibility(request.source_url) if request.source_url else evaluate_publisher_credibility(f"{request.title} {request.text[:200]}")
+    domain_info = evaluate_publisher_credibility(request.source_url) if request.source_url else None
 
     # Model Target Convention: 0 = Fake News, 1 = Real News
     raw_proba_fake = float(model.predict_proba([fused_text], title_texts=title_only)[0, 0])
