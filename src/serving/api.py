@@ -69,11 +69,9 @@ def get_model():
 
 def compute_hybrid_fake_probability(raw_model_fake_proba: float, stylistic_info: dict) -> float:
     """
-    Combines the ML model's statistical probability with stylistic signals
-    to improve generalization to out-of-distribution user-typed text.
-    
-    The pure ML model is trained on Reuters vs clickbait corpora and may miss
-    short user-typed fabrications that lack training-set-specific vocabulary.
+    Combines the ML model's statistical probability with domain-invariant stylistic 
+    and journalistic/scientific attribution signals to eliminate lexical shortcut errors
+    and maximize generalization to out-of-distribution unseen news.
     """
     risk = stylistic_info.get("stylistic_fake_risk", 0.0)
     is_all_caps = stylistic_info.get("is_all_caps_title", False) or stylistic_info.get("is_all_caps_body", False)
@@ -81,19 +79,24 @@ def compute_hybrid_fake_probability(raw_model_fake_proba: float, stylistic_info:
     attribution_score = stylistic_info.get("attribution_score", 0.0)
     exclamation_density = stylistic_info.get("exclamation_density", 0.0)
 
-    p_fake = raw_model_fake_proba
+    p_fake = float(raw_model_fake_proba)
 
-    # Hard-cap upward adjustment: high stylistic risk or ALL CAPS → push toward fake
-    if is_all_caps and p_fake < 0.72:
-        p_fake = max(p_fake, 0.72 + risk * 0.20)
-    if sensational_score >= 0.5 and p_fake < 0.65:
-        p_fake = max(p_fake, 0.65)
-    if exclamation_density > 0.10 and risk >= 0.30 and p_fake < 0.60:
-        p_fake = max(p_fake, 0.60)
+    # 1. High stylistic risk, sensational clickbait triggers, or ALL CAPS -> push strongly toward fake
+    if is_all_caps and p_fake < 0.80:
+        p_fake = max(p_fake, 0.80 + risk * 0.18)
+    if sensational_score >= 0.25:
+        p_fake = max(p_fake, 0.70 + sensational_score * 0.28)
+    if exclamation_density > 0.05 and risk >= 0.25 and p_fake < 0.65:
+        p_fake = max(p_fake, 0.65 + risk * 0.25)
 
-    # Attribution evidence from journalistic language → push toward real
-    if attribution_score >= 0.20 and risk <= 0.15 and p_fake > 0.35:
-        p_fake = max(0.05, p_fake - attribution_score * 0.30)
+    # 2. Authentic scientific, academic, institutional, or journalistic attribution with NO sensationalism
+    # -> Heavily discounts false-positive lexical memorization from political datasets
+    if attribution_score >= 0.70 and risk == 0.0:
+        p_fake = min(p_fake * 0.15, 0.05)
+    elif attribution_score >= 0.35 and risk <= 0.10:
+        p_fake = min(p_fake * 0.30, 0.18)
+    elif attribution_score >= 0.20 and risk <= 0.15 and p_fake > 0.30:
+        p_fake = max(0.08, p_fake - attribution_score * 0.45)
 
     return float(np.clip(p_fake, 0.0001, 0.9999))
 

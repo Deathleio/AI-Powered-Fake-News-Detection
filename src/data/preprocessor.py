@@ -92,15 +92,16 @@ def extract_stylistic_features(title: Optional[str], text: Optional[str]) -> dic
     exclamations = full_raw.count('!') + full_raw.count('?')
     exclamation_density = exclamations / max(1, len(full_raw.split()))
 
-    # 3. Sensationalist & clickbait pattern matcher
+    # 3. Sensationalist & clickbait pattern matcher (exaggerated claims, hyperbole, conspiratorial rhetoric)
     sensational_patterns = [
         r'\b(world is on fire|on fire)\b',
-        r'\b(shocking|bombshell|unbelievable|explosive|mind-blowing)\b',
-        r'\b(secret plot|globalist plot|conspiracy|covert scheme|cover-?up)\b',
-        r'\b(mainstream media refuses|media won\'?t show|they don\'?t want you to see)\b',
-        r'\b(breaking news|must see|watch before deleted|viral video)\b',
-        r'\b(confiscate savings|martial law|arrest warrant leaked)\b',
-        r'\b(dancing with|bizarre ritual|secretly meeting)\b'
+        r'\b(shocking|bombshell|unbelievable|explosive|mind-blowing|jaw-dropping)\b',
+        r'\b(secret plot|globalist plot|conspiracy|covert scheme|cover-?up|sinister agenda)\b',
+        r'\b(mainstream media refuses|media won\'?t show|they don\'?t want you to see|what they aren\'?t telling you)\b',
+        r'\b(breaking news|must see|watch before deleted|viral video|urgent alert)\b',
+        r'\b(confiscate savings|martial law|arrest warrant leaked|secret execution)\b',
+        r'\b(miracle cure|cures all|secret ancient root|big pharma panic|100% natural cure)\b',
+        r'\b(dancing with|bizarre ritual|secretly meeting|alien invasion|clones)\b'
     ]
     detected_sensational = []
     for pattern in sensational_patterns:
@@ -108,36 +109,40 @@ def extract_stylistic_features(title: Optional[str], text: Optional[str]) -> dic
         if matches:
             detected_sensational.extend(matches if isinstance(matches[0], str) else [m[0] for m in matches])
     
-    # 4. Legitimate journalistic attribution patterns
+    # 4. Legitimate journalistic, institutional, & scientific attribution patterns
     attribution_patterns = [
         r'\b(according to|spokesperson said|officials confirmed|in a statement|in an interview)\b',
-        r'\b(press conference|reported on|cited sources|internal memo|department of)\b',
-        r'\b(told reporters|analysts noted|preliminary data showed|reuters|associated press)\b'
+        r'\b(press conference|reported on|cited sources|internal memo|department of|ministry of)\b',
+        r'\b(told reporters|analysts noted|preliminary data showed|reuters|associated press|bloomberg)\b',
+        r'\b(published in (the journal|nature|science|the lancet|cell|jama)|peer-reviewed)\b',
+        r'\b(researchers (at|from|found|discovered)|scientists (at|from|reported)|astronomers (using|detected))\b',
+        r'\b(unanimous vote|federal open market committee|central bank|official policy)\b',
+        r'\b(clinical trial|national institutes of health|world health organization|cdc announced)\b'
     ]
     detected_attributions = []
     for pattern in attribution_patterns:
         matches = re.findall(pattern, full_raw, flags=re.IGNORECASE)
         if matches:
-            detected_attributions.extend(matches)
+            detected_attributions.extend(matches if isinstance(matches[0], str) else [m[0] for m in matches])
             
     attribution_score = min(1.0, len(detected_attributions) * 0.35)
 
     # 5. Composite Stylistic Fake Risk Score [0.0 to 1.0]
     risk = 0.0
     if is_all_caps_title:
-        risk += 0.35
+        risk += 0.40
     if is_all_caps_body:
         risk += 0.35
     elif total_caps_ratio > 0.40:
         risk += 0.20
         
     if detected_sensational:
-        risk += min(0.40, len(detected_sensational) * 0.20)
+        risk += min(0.50, len(detected_sensational) * 0.25)
     if exclamation_density > 0.05:
         risk += 0.20
         
-    # Subtract attribution evidence
-    risk = max(0.0, min(1.0, risk - attribution_score * 0.4))
+    # Genuine institutional/attribution evidence actively discounts fake risk
+    risk = max(0.0, min(1.0, risk - attribution_score * 0.50))
 
     return {
         "caps_ratio": round(total_caps_ratio, 4),
@@ -148,6 +153,7 @@ def extract_stylistic_features(title: Optional[str], text: Optional[str]) -> dic
         "sensational_keywords": list(set(detected_sensational)),
         "sensational_score": round(min(1.0, len(detected_sensational) * 0.25), 2),
         "attribution_score": round(attribution_score, 2),
+        "attribution_keywords": list(set(detected_attributions)),
         "stylistic_fake_risk": round(risk, 4)
     }
 

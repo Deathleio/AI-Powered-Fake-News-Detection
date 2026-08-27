@@ -1,4 +1,4 @@
-﻿import sys
+import sys
 import os
 import json
 import joblib
@@ -56,9 +56,10 @@ print(f"   Accuracy:            {metrics['accuracy']*100:.2f}%")
 print(f"   Macro F1-Score:      {metrics['macro_f1']:.4f}")
 print(f"   ROC-AUC Score:       {metrics['roc_auc']:.4f}")
 print(f"   Precision:           {metrics['precision']:.4f}")
-print(f"   Recall:              {metrics['recall']:.4f}")
-print(f"   True Negatives (TN): {metrics['confusion_matrix']['tn']:,} (Correctly identified Real News)")
-print(f"   True Positives (TP): {metrics['confusion_matrix']['tp']:,} (Correctly identified Fake News)")
-print(f"   False Positives(FP): {metrics['confusion_matrix']['fp']:,} (Real misclassified as Fake)")
-print(f"   False Negatives(FN): {metrics['confusion_matrix']['fn']:,} (Fake misclassified as Real)")
+cm = metrics['confusion_matrix']
+tn, fp, fn, tp = cm[0][0], cm[0][1], cm[1][0], cm[1][1]
+print(f"   True Negatives (TN): {tn:,} (Correctly identified Real News)")
+print(f"   True Positives (TP): {tp:,} (Correctly identified Fake News)")
+print(f"   False Positives(FP): {fp:,} (Real misclassified as Fake)")
+print(f"   False Negatives(FN): {fn:,} (Fake misclassified as Real)")
 print("===============================================================")

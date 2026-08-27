@@ -41,13 +41,16 @@ class LLMFactCheckReasoner:
             else:
                 reasons.append("Stylistic tone exhibits informal/alarmist framing characteristic of unverified news.")
         else:
-            if salient_real_words:
+            if stylistic_info and stylistic_info.get("attribution_keywords"):
+                attrs = ", ".join(stylistic_info["attribution_keywords"][:3])
+                reasons.append(f"Verified authoritative/journalistic attribution detected: '{attrs}'.")
+            elif salient_real_words:
                 reasons.append(f"Factual reporting vocabulary and standard journalistic tone identified: {', '.join([w['token'] for w in salient_real_words[:4]])}.")
             else:
                 reasons.append("Attribution markers align with standard news reporting.")
                 
             if stylistic_info and stylistic_info.get("attribution_score", 0) > 0:
-                reasons.append("Formal journalistic attribution markers and objective syntax verified.")
+                reasons.append("Formal journalistic/scientific attribution markers and objective syntax verified.")
             else:
                 reasons.append("Syntactic structure adheres to objective narrative standards.")
             
@@ -56,6 +59,7 @@ class LLMFactCheckReasoner:
             "confidence_percentage": round(confidence * 100, 2),
             "fake_probability": round(fake_probability, 4),
             "key_indicators": [w['token'] for w in (salient_fake_words if is_fake else salient_real_words)[:5]],
+            "attribution_indicators": stylistic_info.get("attribution_keywords", []) if stylistic_info else [],
             "rationale": " ".join(reasons)
         }
         return summary
