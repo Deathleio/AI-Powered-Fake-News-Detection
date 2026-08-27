@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-    <meta name="theme-color" content="#fbf9f5">
-    <title>VeritasAI • Fake News Detection & Explainable NLP Engine</title>
+    <meta name="theme-color" content="#f8fafc">
+    <title>Veritas • Smart News & Fact Checker</title>
     <!-- Google Fonts & FontAwesome -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=2.1">
+    <link rel="stylesheet" href="style.css?v=4.0">
 </head>
 <body>
 
@@ -18,44 +18,88 @@
     <header class="navbar">
         <div class="container nav-container">
             <div class="logo">
-                <i class="fa-solid fa-shield-halved"></i>
-                <span>Veritas<strong>AI</strong></span>
-                <span class="badge-tag">Detector</span>
+                <i class="fa-solid fa-shield-halved logo-icon"></i>
+                <div class="logo-text">
+                    <span>Veritas<strong>AI</strong></span>
+                </div>
             </div>
             <div class="header-right">
                 <span class="status-indicator online" id="navStatusIndicator">
-                    <i class="fa-solid fa-circle"></i> <span id="statusText">AI Cloud Engine Active</span>
+                    <i class="fa-solid fa-circle"></i> <span id="statusText">AI Fact-Checker Ready</span>
                 </span>
             </div>
         </div>
     </header>
+
+    <!-- Hero / Headline Area -->
+    <section class="hero-section">
+        <div class="container">
+            <h1>Check if a news story is real or fake.</h1>
+            <p class="hero-subtitle">Paste a news link, headline, or claim. Our AI checks the facts, source credibility, and writing style in seconds.</p>
+            
+            <!-- Quick Preset Examples -->
+            <div class="presets-container">
+                <span class="presets-label">Try an example:</span>
+                <div class="presets-list">
+                    <button type="button" class="preset-pill" onclick="loadSample('nasa')">
+                        <i class="fa-solid fa-rocket"></i> NASA Space Discovery
+                    </button>
+                    <button type="button" class="preset-pill" onclick="loadSample('cure')">
+                        <i class="fa-solid fa-triangle-exclamation"></i> Miracle Cure Scam
+                    </button>
+                    <button type="button" class="preset-pill" onclick="loadSample('fed')">
+                        <i class="fa-solid fa-landmark"></i> Federal Reserve Rates
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
 
     <!-- Main Container -->
     <main class="container main-layout">
         <!-- Input Panel -->
         <section class="card input-card">
             <div class="card-header">
-                <h2><i class="fa-regular fa-newspaper"></i> Analyze News Article</h2>
-                <p class="subtitle">Enter a headline and body text to inspect linguistic veracity and authenticity.</p>
+                <h2><i class="fa-solid fa-magnifying-glass"></i> Enter News to Verify</h2>
+            </div>
+
+            <!-- Mode Selector Tabs -->
+            <div class="tab-group">
+                <button type="button" class="tab-btn active" id="tabText" onclick="switchInputTab('text')">
+                    <i class="fa-solid fa-pen-nib"></i> Paste Text or Headline
+                </button>
+                <button type="button" class="tab-btn" id="tabUrl" onclick="switchInputTab('url')">
+                    <i class="fa-solid fa-link"></i> Check Web Link
+                </button>
             </div>
 
             <form id="analyzeForm">
-                <div class="form-group">
-                    <label for="articleTitle">News Headline / Title</label>
-                    <input type="text" id="articleTitle" placeholder="e.g. BREAKING REPORT: Massive Turnout...">
+                <!-- URL Input Group -->
+                <div class="form-group" id="urlGroup" style="display: none;">
+                    <label for="articleUrl">Article Web Address (URL)</label>
+                    <input type="url" id="articleUrl" placeholder="https://www.bbc.com/news/world-sample...">
+                    <small class="help-text">We'll automatically read the article text and check the publisher's reputation.</small>
                 </div>
 
-                <div class="form-group">
-                    <label for="articleText">Article Body Content</label>
-                    <textarea id="articleText" rows="6" placeholder="Paste full article text or news paragraphs..."></textarea>
+                <!-- Text Input Groups -->
+                <div id="textInputGroup">
+                    <div class="form-group">
+                        <label for="articleTitle">Headline or Claim</label>
+                        <input type="text" id="articleTitle" placeholder="e.g. Scientists discover water vapor in new solar system...">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="articleText">Article Story or Paragraphs</label>
+                        <textarea id="articleText" rows="6" placeholder="Paste the news story, paragraph, or social media post here..."></textarea>
+                    </div>
                 </div>
 
                 <div class="form-actions">
                     <button type="submit" id="submitBtn" class="btn btn-primary">
-                        <i class="fa-solid fa-magnifying-glass-chart"></i> Run AI Classification
+                        <i class="fa-solid fa-shield-check"></i> Verify This News
                     </button>
                     <button type="button" id="clearBtn" class="btn btn-secondary" onclick="clearForm()">
-                        <i class="fa-solid fa-eraser"></i> Clear
+                        <i class="fa-solid fa-rotate-left"></i> Reset
                     </button>
                 </div>
             </form>
@@ -63,75 +107,117 @@
 
         <!-- Results Panel -->
         <section class="card result-card" id="resultSection">
-            <div class="card-header">
-                <h2><i class="fa-solid fa-chart-pie"></i> Verification Results</h2>
+            <div class="card-header result-header-flex">
+                <h2><i class="fa-solid fa-clipboard-check"></i> Verification Result</h2>
+                <div class="header-actions" id="resultActions" style="display: none;">
+                    <button type="button" class="btn-xs" onclick="exportForensicReport()"><i class="fa-solid fa-download"></i> Save Report</button>
+                    <button type="button" class="btn-xs" onclick="openFeedbackModal()"><i class="fa-solid fa-flag"></i> Give Feedback</button>
+                </div>
             </div>
 
             <!-- Empty State Placeholder -->
             <div id="placeholderState" class="empty-state">
-                <div class="empty-icon"><i class="fa-solid fa-microchip"></i></div>
-                <h3>Ready For Evaluation</h3>
-                <p>Submit an article or choose a preset sample to view real-time deep learning classification and explainability.</p>
+                <div class="empty-icon"><i class="fa-solid fa-newspaper"></i></div>
+                <h3>Ready to Check</h3>
+                <p>Paste a news article or try one of the examples above to see instant results with clear explanations.</p>
             </div>
 
             <!-- Active Results Content -->
             <div id="activeResults" style="display: none;">
-                <!-- Verdict Banner -->
+                <!-- Main Verdict Banner -->
                 <div class="verdict-banner" id="verdictBanner">
-                    <div class="verdict-icon" id="verdictIcon">
-                        <i class="fa-solid fa-circle-check"></i>
-                    </div>
-                    <div class="verdict-text-group">
-                        <span class="verdict-label">Classification Verdict</span>
-                        <h3 id="verdictTitle">Real News</h3>
-                    </div>
-                    <div class="confidence-badge" id="confidenceBadge">
-                        99.74% Confidence
-                    </div>
-                </div>
-
-                <!-- Probability Meter -->
-                <div class="meter-card">
-                    <div class="meter-labels">
-                        <span>Authenticity (Real)</span>
-                        <span id="meterPercent">0%</span>
-                        <span>Fake / Sensational</span>
-                    </div>
-                    <div class="progress-track">
-                        <div class="progress-fill" id="progressFill" style="width: 0%;"></div>
+                    <div class="verdict-main-row">
+                        <div class="verdict-icon" id="verdictIcon">
+                            <i class="fa-solid fa-circle-check"></i>
+                        </div>
+                        <div class="verdict-text-group">
+                            <span class="verdict-label">Overall Assessment</span>
+                            <h3 id="verdictTitle">Real News</h3>
+                        </div>
+                        <div class="score-display">
+                            <div class="trust-score-badge" id="trustScoreBadge">
+                                <span class="score-num" id="trustScoreNum">95</span>
+                                <span class="score-denom">/100</span>
+                            </div>
+                            <span class="score-label" id="scoreLabelText">Trust Score</span>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Token Saliency Trigger Chips -->
+                <!-- Publisher & Source Reputation Card -->
+                <div class="section-block publisher-card" id="publisherCard" style="display: none;">
+                    <div class="publisher-header">
+                        <div>
+                            <span class="pub-type" id="pubType">Source Credibility</span>
+                            <h4 id="pubDomain">reuters.com</h4>
+                        </div>
+                        <div class="pub-score-badge" id="pubScoreBadge">
+                            Rating: <strong id="pubAuthority">Verified News Source</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Simple Explanation & Fact-Checking Reasoner -->
+                <div class="section-block explanation-box">
+                    <h4><i class="fa-solid fa-lightbulb"></i> Why This Result Was Given</h4>
+                    <p id="rationaleText" class="rationale-content">--</p>
+                    <div class="knowledge-citations" id="knowledgeCitations"></div>
+                </div>
+
+                <!-- Sentence-by-Sentence Breakdown -->
+                <div class="section-block" id="claimsBlock">
+                    <h4><i class="fa-solid fa-list-check"></i> Sentence-by-Sentence Check</h4>
+                    <div class="claims-list" id="claimsList"></div>
+                </div>
+
+                <!-- Key Keywords / Signals -->
                 <div class="section-block">
-                    <h4><i class="fa-solid fa-highlighter"></i> Top Token Saliency Indicators</h4>
-                    <p class="small-text">Key vocabulary driving the model's decision:</p>
+                    <h4><i class="fa-solid fa-tags"></i> Key Words Identified</h4>
                     <div class="chips-container" id="chipsContainer"></div>
                 </div>
 
-                <!-- AI Fact-Checking Reasoner Rationale -->
-                <div class="section-block rationale-box">
-                    <h4><i class="fa-solid fa-brain"></i> AI Reasoning & Stylistic Audit</h4>
-                    <p id="rationaleText" class="rationale-content">--</p>
-                </div>
-
-                <!-- Highlighted Text Snippet -->
+                <!-- Annotated Story View -->
                 <div class="section-block">
-                    <h4><i class="fa-solid fa-align-left"></i> Annotated Text View</h4>
+                    <h4><i class="fa-solid fa-highlighter"></i> Highlighted Text</h4>
                     <div class="annotated-box" id="annotatedBox"></div>
                 </div>
             </div>
         </section>
     </main>
 
+    <!-- Feedback Modal -->
+    <div id="feedbackModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-flag"></i> Share Feedback</h3>
+                <button type="button" class="close-btn" onclick="closeFeedbackModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Did our AI get something wrong? Let us know so we can improve accuracy:</p>
+                <div class="form-group">
+                    <label>What should this be?</label>
+                    <select id="feedbackVerdict">
+                        <option value="Real News">Real / Authentic News</option>
+                        <option value="Fake News">Fake / Misleading News</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Why? (Optional)</label>
+                    <textarea id="feedbackNotes" rows="3" placeholder="Tell us why this was real or fake..."></textarea>
+                </div>
+                <button type="button" class="btn btn-primary" onclick="submitFeedbackForm()">Send Feedback</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Footer -->
     <footer class="footer">
         <div class="container footer-content">
-            <p>AI Powered Fake News Detection System • NLP & Deep Learning</p>
-            <p class="stats-line"><i class="fa-solid fa-bolt"></i> 96.82% Benchmark Accuracy</p>
+            <p>Veritas • AI Fact-Checking & News Verification</p>
+            <p class="stats-line"><i class="fa-solid fa-lock"></i> Safe, private, and powered by multi-domain machine learning.</p>
         </div>
     </footer>
 
-    <script src="app.js?v=2.1"></script>
+    <script src="app.js?v=4.0"></script>
 </body>
 </html>
