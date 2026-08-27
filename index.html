@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-    <meta name="theme-color" content="#fbf9f5">
-    <title>VeritasAI • Fake News Detection & Explainable NLP Engine</title>
+    <meta name="theme-color" content="#0d1117">
+    <title>VeritasAI • Enterprise Veracity Intelligence & Fact-Checking Platform</title>
     <!-- Google Fonts & FontAwesome -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=2.1">
+    <link rel="stylesheet" href="style.css?v=3.0">
 </head>
 <body>
 
@@ -18,14 +18,18 @@
     <header class="navbar">
         <div class="container nav-container">
             <div class="logo">
-                <i class="fa-solid fa-shield-halved"></i>
-                <span>Veritas<strong>AI</strong></span>
-                <span class="badge-tag">Detector</span>
+                <i class="fa-solid fa-shield-halved logo-icon"></i>
+                <div class="logo-text">
+                    <span>Veritas<strong>AI</strong></span>
+                    <span class="badge-tag">ENTERPRISE v2.0</span>
+                </div>
             </div>
             <div class="header-right">
-                <span class="status-indicator online" id="navStatusIndicator">
-                    <i class="fa-solid fa-circle"></i> <span id="statusText">AI Cloud Engine Active</span>
-                </span>
+                <div class="nav-badges">
+                    <span class="status-indicator online" id="navStatusIndicator">
+                        <i class="fa-solid fa-circle"></i> <span id="statusText">AI Cloud Engine Active</span>
+                    </span>
+                </div>
             </div>
         </div>
     </header>
@@ -35,24 +39,44 @@
         <!-- Input Panel -->
         <section class="card input-card">
             <div class="card-header">
-                <h2><i class="fa-regular fa-newspaper"></i> Analyze News Article</h2>
-                <p class="subtitle">Enter a headline and body text to inspect linguistic veracity and authenticity.</p>
+                <h2><i class="fa-solid fa-magnifying-glass-chart"></i> Veracity Intelligence Engine</h2>
+                <p class="subtitle">Inspect articles, claims, or direct URLs for disinformation, bias, and source authority.</p>
+            </div>
+
+            <!-- Mode Selector Tabs -->
+            <div class="tab-group">
+                <button type="button" class="tab-btn active" id="tabText" onclick="switchInputTab('text')">
+                    <i class="fa-solid fa-align-left"></i> Text / Headline
+                </button>
+                <button type="button" class="tab-btn" id="tabUrl" onclick="switchInputTab('url')">
+                    <i class="fa-solid fa-globe"></i> Web Article URL
+                </button>
             </div>
 
             <form id="analyzeForm">
-                <div class="form-group">
-                    <label for="articleTitle">News Headline / Title</label>
-                    <input type="text" id="articleTitle" placeholder="e.g. BREAKING REPORT: Massive Turnout...">
+                <!-- URL Input Group -->
+                <div class="form-group" id="urlGroup" style="display: none;">
+                    <label for="articleUrl"><i class="fa-solid fa-link"></i> Web Article URL</label>
+                    <input type="url" id="articleUrl" placeholder="https://www.reuters.com/world/article-sample...">
+                    <small class="help-text">Directly parses headlines, body copy, and publisher domain.</small>
                 </div>
 
-                <div class="form-group">
-                    <label for="articleText">Article Body Content</label>
-                    <textarea id="articleText" rows="6" placeholder="Paste full article text or news paragraphs..."></textarea>
+                <!-- Text Input Groups -->
+                <div id="textInputGroup">
+                    <div class="form-group">
+                        <label for="articleTitle">News Headline / Claim</label>
+                        <input type="text" id="articleTitle" placeholder="e.g. James Webb Space Telescope Detects Water Vapor...">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="articleText">Article Content / Context</label>
+                        <textarea id="articleText" rows="6" placeholder="Paste full article text, news snippet, or social post..."></textarea>
+                    </div>
                 </div>
 
                 <div class="form-actions">
                     <button type="submit" id="submitBtn" class="btn btn-primary">
-                        <i class="fa-solid fa-magnifying-glass-chart"></i> Run AI Classification
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Run Deep Verification
                     </button>
                     <button type="button" id="clearBtn" class="btn btn-secondary" onclick="clearForm()">
                         <i class="fa-solid fa-eraser"></i> Clear
@@ -64,19 +88,23 @@
         <!-- Results Panel -->
         <section class="card result-card" id="resultSection">
             <div class="card-header">
-                <h2><i class="fa-solid fa-chart-pie"></i> Verification Results</h2>
+                <h2><i class="fa-solid fa-chart-pie"></i> Veracity Assessment</h2>
+                <div class="header-actions" id="resultActions" style="display: none;">
+                    <button type="button" class="btn-xs" onclick="exportForensicReport()"><i class="fa-solid fa-file-arrow-down"></i> Export Report</button>
+                    <button type="button" class="btn-xs" onclick="openFeedbackModal()"><i class="fa-solid fa-flag"></i> Flag</button>
+                </div>
             </div>
 
             <!-- Empty State Placeholder -->
             <div id="placeholderState" class="empty-state">
                 <div class="empty-icon"><i class="fa-solid fa-microchip"></i></div>
-                <h3>Ready For Evaluation</h3>
-                <p>Submit an article or choose a preset sample to view real-time deep learning classification and explainability.</p>
+                <h3>Ready For Intelligence Audit</h3>
+                <p>Submit a news headline, full article, or live URL to inspect multi-domain neural credibility, claim forensics, and real-time knowledge grounding.</p>
             </div>
 
             <!-- Active Results Content -->
             <div id="activeResults" style="display: none;">
-                <!-- Verdict Banner -->
+                <!-- Veritas Score & Verdict Banner -->
                 <div class="verdict-banner" id="verdictBanner">
                     <div class="verdict-icon" id="verdictIcon">
                         <i class="fa-solid fa-circle-check"></i>
@@ -85,8 +113,25 @@
                         <span class="verdict-label">Classification Verdict</span>
                         <h3 id="verdictTitle">Real News</h3>
                     </div>
-                    <div class="confidence-badge" id="confidenceBadge">
-                        99.74% Confidence
+                    <div class="score-display">
+                        <div class="trust-score-badge" id="trustScoreBadge">
+                            <span class="score-num" id="trustScoreNum">95</span>
+                            <span class="score-denom">/ 100</span>
+                        </div>
+                        <span class="score-label">Veritas Trust Index</span>
+                    </div>
+                </div>
+
+                <!-- Publisher & Domain Credibility Card -->
+                <div class="section-block publisher-card" id="publisherCard">
+                    <div class="publisher-header">
+                        <div class="publisher-info">
+                            <span class="pub-type" id="pubType">Tier 1 Wire Agency</span>
+                            <h4 id="pubDomain">reuters.com</h4>
+                        </div>
+                        <div class="pub-score-badge" id="pubScoreBadge">
+                            Authority: <strong id="pubAuthority">98/100</strong>
+                        </div>
                     </div>
                 </div>
 
@@ -102,17 +147,23 @@
                     </div>
                 </div>
 
-                <!-- Token Saliency Trigger Chips -->
-                <div class="section-block">
-                    <h4><i class="fa-solid fa-highlighter"></i> Top Token Saliency Indicators</h4>
-                    <p class="small-text">Key vocabulary driving the model's decision:</p>
-                    <div class="chips-container" id="chipsContainer"></div>
+                <!-- AI Fact-Checking Reasoner & Live Grounding -->
+                <div class="section-block rationale-box">
+                    <h4><i class="fa-solid fa-brain"></i> AI Reasoning & Knowledge Grounding</h4>
+                    <p id="rationaleText" class="rationale-content">--</p>
+                    <div class="knowledge-citations" id="knowledgeCitations"></div>
                 </div>
 
-                <!-- AI Fact-Checking Reasoner Rationale -->
-                <div class="section-block rationale-box">
-                    <h4><i class="fa-solid fa-brain"></i> AI Reasoning & Stylistic Audit</h4>
-                    <p id="rationaleText" class="rationale-content">--</p>
+                <!-- Sentence-Level Claim Forensics -->
+                <div class="section-block" id="claimsBlock">
+                    <h4><i class="fa-solid fa-list-check"></i> Claim-by-Claim Forensic Matrix</h4>
+                    <div class="claims-list" id="claimsList"></div>
+                </div>
+
+                <!-- Token Saliency Trigger Chips -->
+                <div class="section-block">
+                    <h4><i class="fa-solid fa-highlighter"></i> Top Salient Lexical Indicators</h4>
+                    <div class="chips-container" id="chipsContainer"></div>
                 </div>
 
                 <!-- Highlighted Text Snippet -->
@@ -124,14 +175,39 @@
         </section>
     </main>
 
+    <!-- Feedback Modal -->
+    <div id="feedbackModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-flag"></i> Submit Analyst Feedback</h3>
+                <button type="button" class="close-btn" onclick="closeFeedbackModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Help active learning retraining by reporting any edge-case classifications:</p>
+                <div class="form-group">
+                    <label>Correct Assessment:</label>
+                    <select id="feedbackVerdict">
+                        <option value="Real News">Real News / Verified</option>
+                        <option value="Fake News">Fake News / Disinformation</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Notes / Context:</label>
+                    <textarea id="feedbackNotes" rows="3" placeholder="Optional notes for model training..."></textarea>
+                </div>
+                <button type="button" class="btn btn-primary" onclick="submitFeedbackForm()">Submit Feedback</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Footer -->
     <footer class="footer">
         <div class="container footer-content">
-            <p>AI Powered Fake News Detection System • NLP & Deep Learning</p>
-            <p class="stats-line"><i class="fa-solid fa-bolt"></i> 96.82% Benchmark Accuracy</p>
+            <p>VeritasAI Enterprise Veracity Intelligence Platform • Multi-Domain Neural & Knowledge Grounding</p>
+            <p class="stats-line"><i class="fa-solid fa-shield-halved"></i> 75,970 Multi-Domain Corpus • Real-time Encyclopedic Verification</p>
         </div>
     </footer>
 
-    <script src="app.js?v=2.1"></script>
+    <script src="app.js?v=3.0"></script>
 </body>
 </html>

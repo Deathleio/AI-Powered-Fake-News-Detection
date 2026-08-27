@@ -2,10 +2,15 @@
 const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.port === '8000' || window.location.protocol === 'file:';
 const BACKEND_API_URL = (isLocal && window.location.protocol !== 'file:') ? window.location.origin : (window.location.protocol === 'file:' ? 'http://127.0.0.1:8000' : 'https://ai-powered-fake-news-detection-bcbb.onrender.com');
 
+let currentActiveTab = 'text';
+let lastAnalyzedResult = null;
+let currentAbortController = null;
+
 document.addEventListener("DOMContentLoaded", () => {
     const form = document.getElementById("analyzeForm");
     const titleInput = document.getElementById("articleTitle");
     const textInput = document.getElementById("articleText");
+    const urlInput = document.getElementById("articleUrl");
 
     form.addEventListener("submit", async (e) => {
         e.preventDefault();
@@ -15,13 +20,17 @@ document.addEventListener("DOMContentLoaded", () => {
     const handleInputChange = () => {
         const title = titleInput.value.trim();
         const text = textInput.value.trim();
-        if (!title && !text) {
+        const url = urlInput ? urlInput.value.trim() : '';
+
+        if (!title && !text && !url) {
             if (currentAbortController) {
                 currentAbortController.abort();
                 currentAbortController = null;
             }
             document.getElementById("placeholderState").style.display = "block";
             document.getElementById("activeResults").style.display = "none";
+            const actions = document.getElementById("resultActions");
+            if (actions) actions.style.display = "none";
             resetSubmitButton();
         } else {
             resetSubmitButton();
@@ -30,10 +39,31 @@ document.addEventListener("DOMContentLoaded", () => {
 
     titleInput.addEventListener("input", handleInputChange);
     textInput.addEventListener("input", handleInputChange);
+    if (urlInput) urlInput.addEventListener("input", handleInputChange);
 
     checkBackendHealth();
     setInterval(checkBackendHealth, 30000);
 });
+
+function switchInputTab(tab) {
+    currentActiveTab = tab;
+    const tabText = document.getElementById("tabText");
+    const tabUrl = document.getElementById("tabUrl");
+    const textGroup = document.getElementById("textInputGroup");
+    const urlGroup = document.getElementById("urlGroup");
+
+    if (tab === 'url') {
+        tabUrl.classList.add("active");
+        tabText.classList.remove("active");
+        urlGroup.style.display = "block";
+        textGroup.style.display = "none";
+    } else {
+        tabText.classList.add("active");
+        tabUrl.classList.remove("active");
+        textGroup.style.display = "block";
+        urlGroup.style.display = "none";
+    }
+}
 
 async function checkBackendHealth() {
     try {
@@ -42,12 +72,12 @@ async function checkBackendHealth() {
         const response = await fetch(`${BACKEND_API_URL}/health`, { method: "GET", signal: controller.signal });
         clearTimeout(timeoutId);
         if (response.ok) {
-            updateNavStatus(true, "AI Cloud Engine Active");
+            updateNavStatus(true, "Enterprise Cloud Active");
         } else {
-            updateNavStatus(false, "AI Engine Connecting...");
+            updateNavStatus(false, "Connecting to Cloud...");
         }
     } catch {
-        updateNavStatus(false, "AI Engine Connecting...");
+        updateNavStatus(false, "Connecting to Cloud...");
     }
 }
 
@@ -60,13 +90,11 @@ function updateNavStatus(isOnline, text) {
     }
 }
 
-let currentAbortController = null;
-
 function resetSubmitButton() {
     const submitBtn = document.getElementById("submitBtn");
     if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.innerHTML = '<i class="fa-solid fa-magnifying-glass-chart"></i> Run AI Classification';
+        submitBtn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Run Deep Verification';
     }
 }
 
@@ -77,29 +105,49 @@ function clearForm() {
     }
     document.getElementById("articleTitle").value = "";
     document.getElementById("articleText").value = "";
+    const urlInput = document.getElementById("articleUrl");
+    if (urlInput) urlInput.value = "";
     document.getElementById("placeholderState").style.display = "block";
     document.getElementById("activeResults").style.display = "none";
+    const actions = document.getElementById("resultActions");
+    if (actions) actions.style.display = "none";
+    lastAnalyzedResult = null;
     resetSubmitButton();
 }
 
 async function analyzeArticle() {
-    const title = document.getElementById("articleTitle").value.trim();
-    const text = document.getElementById("articleText").value.trim();
-
-    if (!title && !text) {
-        alert("Please enter a headline or article body text to analyze.");
-        return;
-    }
-
     const submitBtn = document.getElementById("submitBtn");
     submitBtn.disabled = true;
 
     try {
+        let endpoint = `${BACKEND_API_URL}/explain`;
+        let payload = {};
+
+        if (currentActiveTab === 'url') {
+            const url = document.getElementById("articleUrl").value.trim();
+            if (!url) {
+                alert("Please enter a valid news URL.");
+                resetSubmitButton();
+                return;
+            }
+            endpoint = `${BACKEND_API_URL}/api/v1/analyze-url`;
+            payload = { url };
+        } else {
+            const title = document.getElementById("articleTitle").value.trim();
+            const text = document.getElementById("articleText").value.trim();
+            if (!title && !text) {
+                alert("Please enter a headline or article body text to analyze.");
+                resetSubmitButton();
+                return;
+            }
+            payload = { title, text };
+        }
+
         const maxAttempts = 3;
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
             submitBtn.innerHTML = attempt === 1
-                ? '<i class="fa-solid fa-spinner fa-spin"></i> Analyzing with AI...'
-                : `<i class="fa-solid fa-spinner fa-spin"></i> Waking Cloud Engine (${attempt}/${maxAttempts})...`;
+                ? '<i class="fa-solid fa-spinner fa-spin"></i> Analyzing Veracity...'
+                : `<i class="fa-solid fa-spinner fa-spin"></i> Waking Engine (${attempt}/${maxAttempts})...`;
 
             try {
                 currentAbortController = new AbortController();
@@ -107,31 +155,33 @@ async function analyzeArticle() {
                     if (currentAbortController) currentAbortController.abort();
                 }, 35000);
 
-                const response = await fetch(`${BACKEND_API_URL}/explain`, {
+                const response = await fetch(endpoint, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ title, text }),
+                    body: JSON.stringify(payload),
                     signal: currentAbortController.signal
                 });
                 clearTimeout(timeoutId);
 
                 if (!response.ok) {
-                    throw new Error(`HTTP Error ${response.status}`);
+                    const errJson = await response.json().catch(() => ({}));
+                    throw new Error(errJson.detail || `HTTP Error ${response.status}`);
                 }
 
                 const data = await response.json();
-                updateNavStatus(true, "AI Cloud Engine Active");
+                lastAnalyzedResult = data;
+                updateNavStatus(true, "Enterprise Cloud Active");
                 renderResults(data);
-                return; // Success!
+                return;
 
             } catch (err) {
                 if (err.name === 'AbortError') {
-                    console.log("Analysis cancelled by user.");
+                    console.log("Analysis cancelled.");
                     return;
                 }
                 console.warn(`Attempt ${attempt} failed:`, err.message);
                 if (attempt === maxAttempts) {
-                    alert(`The AI Cloud engine is taking longer than expected to wake up.\n\nPlease wait 10-15 seconds and try clicking 'Run AI Classification' again.`);
+                    alert(`Engine response: ${err.message || 'Server timeout. Please try again.'}`);
                 } else {
                     await new Promise(r => setTimeout(r, 4000));
                 }
@@ -146,12 +196,14 @@ async function analyzeArticle() {
 function renderResults(data) {
     document.getElementById("placeholderState").style.display = "none";
     document.getElementById("activeResults").style.display = "block";
+    const actions = document.getElementById("resultActions");
+    if (actions) actions.style.display = "flex";
 
     const isFake = data.is_fake;
     const banner = document.getElementById("verdictBanner");
     const icon = document.getElementById("verdictIcon");
     const title = document.getElementById("verdictTitle");
-    const badge = document.getElementById("confidenceBadge");
+    const trustScoreNum = document.getElementById("trustScoreNum");
     const progressFill = document.getElementById("progressFill");
     const meterPercent = document.getElementById("meterPercent");
 
@@ -159,16 +211,70 @@ function renderResults(data) {
     icon.innerHTML = isFake 
         ? '<i class="fa-solid fa-triangle-exclamation"></i>' 
         : '<i class="fa-solid fa-circle-check"></i>';
-    title.innerText = isFake ? "Fake / Disinformation News" : "Real / Authentic News";
-    badge.innerText = `${data.confidence_percentage}% Confidence`;
+    title.innerText = isFake ? "Fake News / Disinformation" : "Real / Authentic Journalism";
+
+    const trustScore = data.veritas_score !== undefined ? data.veritas_score : (isFake ? 15 : 95);
+    trustScoreNum.innerText = trustScore;
+    trustScoreNum.style.color = isFake ? "var(--fake-accent)" : "var(--real-accent)";
 
     progressFill.className = `progress-fill ${isFake ? "fake" : "real"}`;
     progressFill.style.width = `${data.confidence_percentage}%`;
-    meterPercent.innerText = `${isFake ? "Fake" : "Authenticity"}: ${data.confidence_percentage}%`;
+    meterPercent.innerText = `${isFake ? "Fake Probability" : "Authenticity"}: ${data.confidence_percentage}%`;
 
+    // Publisher & Domain Credibility
+    const pubCard = document.getElementById("publisherCard");
+    if (data.domain_credibility) {
+        pubCard.style.display = "block";
+        document.getElementById("pubDomain").innerText = data.domain_credibility.domain;
+        document.getElementById("pubType").innerText = data.domain_credibility.publisher_type;
+        document.getElementById("pubAuthority").innerText = `${data.domain_credibility.authority_score}/100`;
+    } else {
+        pubCard.style.display = "none";
+    }
+
+    // AI Reasoning & Live Encyclopedic Grounding
+    const rationaleText = document.getElementById("rationaleText");
+    rationaleText.innerText = data.llm_reasoning && data.llm_reasoning.rationale 
+        ? data.llm_reasoning.rationale 
+        : "Evaluated across multi-domain neural stylometry and contextual feature representations.";
+
+    const citationsDiv = document.getElementById("knowledgeCitations");
+    citationsDiv.innerHTML = "";
+    if (data.llm_reasoning && data.llm_reasoning.knowledge_corroboration && data.llm_reasoning.knowledge_corroboration.length > 0) {
+        data.llm_reasoning.knowledge_corroboration.forEach(k => {
+            const chip = document.createElement("div");
+            chip.className = "citation-chip";
+            chip.innerHTML = `<i class="fa-solid fa-book-bookmark"></i> <div><strong>${k.title}:</strong> ${k.snippet}</div>`;
+            citationsDiv.appendChild(chip);
+        });
+    }
+
+    // Claim-by-Claim Forensic Matrix
+    const claimsBlock = document.getElementById("claimsBlock");
+    const claimsList = document.getElementById("claimsList");
+    claimsList.innerHTML = "";
+    if (data.claims_breakdown && data.claims_breakdown.length > 0) {
+        claimsBlock.style.display = "block";
+        data.claims_breakdown.forEach(c => {
+            const item = document.createElement("div");
+            item.className = `claim-item ${c.tag_class}`;
+            item.innerHTML = `
+                <div class="claim-top">
+                    <span class="claim-tag ${c.tag_class}">Claim #${c.claim_id}: ${c.category}</span>
+                    <span class="small-text">${c.risk_level}</span>
+                </div>
+                <p>"${c.text}"</p>
+                <p class="claim-note">${c.note}</p>
+            `;
+            claimsList.appendChild(item);
+        });
+    } else {
+        claimsBlock.style.display = "none";
+    }
+
+    // Top Salient Token Chips
     const chipsContainer = document.getElementById("chipsContainer");
     chipsContainer.innerHTML = "";
-
     const indicators = isFake ? data.fake_indicators : data.real_indicators;
     if (indicators && indicators.length > 0) {
         indicators.forEach(item => {
@@ -178,14 +284,54 @@ function renderResults(data) {
             chipsContainer.appendChild(chip);
         });
     } else {
-        chipsContainer.innerHTML = '<span class="small-text">Balanced vocabulary patterns.</span>';
+        chipsContainer.innerHTML = '<span class="small-text">Balanced stylistic syntax.</span>';
     }
 
-    const rationaleText = document.getElementById("rationaleText");
-    rationaleText.innerText = data.llm_reasoning && data.llm_reasoning.rationale 
-        ? data.llm_reasoning.rationale 
-        : "Classification computed via high-dimensional linguistic feature weights.";
-
+    // Highlighted Text View
     const annotatedBox = document.getElementById("annotatedBox");
     annotatedBox.innerHTML = data.highlighted_html || "<p>Annotation rendered.</p>";
+}
+
+function exportForensicReport() {
+    if (!lastAnalyzedResult) return;
+    const jsonStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(lastAnalyzedResult, null, 2));
+    const dlAnchor = document.createElement('a');
+    dlAnchor.setAttribute("href", jsonStr);
+    dlAnchor.setAttribute("download", `VeritasAI_Forensic_Report_${Date.now()}.json`);
+    document.body.appendChild(dlAnchor);
+    dlAnchor.click();
+    dlAnchor.remove();
+}
+
+function openFeedbackModal() {
+    document.getElementById("feedbackModal").style.display = "flex";
+}
+
+function closeFeedbackModal() {
+    document.getElementById("feedbackModal").style.display = "none";
+}
+
+async function submitFeedbackForm() {
+    const verdict = document.getElementById("feedbackVerdict").value;
+    const notes = document.getElementById("feedbackNotes").value;
+    const title = document.getElementById("articleTitle").value || (lastAnalyzedResult ? lastAnalyzedResult.verdict : "");
+    const text = document.getElementById("articleText").value || "";
+
+    try {
+        await fetch(`${BACKEND_API_URL}/api/v1/feedback`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                title: title,
+                text: text,
+                predicted_verdict: lastAnalyzedResult ? lastAnalyzedResult.verdict : "Unknown",
+                user_reported_verdict: verdict,
+                notes: notes
+            })
+        });
+        alert("Thank you! Feedback recorded for model active learning retraining.");
+        closeFeedbackModal();
+    } catch {
+        alert("Failed to submit feedback.");
+    }
 }
