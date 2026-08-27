@@ -7,12 +7,21 @@ from sklearn.model_selection import train_test_split
 from src.config import config
 from src.data.preprocessor import TextPreprocessor
 
-def load_raw_dataset(csv_path: str = config.RAW_DATA_PATH) -> pd.DataFrame:
+def load_raw_dataset(csv_path: str = None) -> pd.DataFrame:
     """
-    Loads dataset strictly respecting user's ground truth definition:
+    Loads dataset strictly respecting ground truth definition:
     0 = FAKE NEWS
     1 = REAL NEWS
+    Prioritizes dataset_study/unified_multidomain_dataset.csv (WELFake + LIAR + CoAID) if available.
     """
+    unified_path = os.path.join(os.path.abspath("dataset_study"), "unified_multidomain_dataset.csv")
+    
+    if csv_path is None:
+        if os.path.exists(unified_path):
+            csv_path = unified_path
+        else:
+            csv_path = config.RAW_DATA_PATH
+            
     if not os.path.exists(csv_path):
         raise FileNotFoundError(f"Dataset not found at {csv_path}")
     
@@ -30,10 +39,12 @@ def load_raw_dataset(csv_path: str = config.RAW_DATA_PATH) -> pd.DataFrame:
     mask = (df['title'].str.strip() != '') | (df['text'].str.strip() != '')
     df = df[mask].reset_index(drop=True)
     
-    # 4. Standard Target Convention: 1 = Real / Authentic News, 0 = Fake / Disinformation News
-    # In WELFake CSV: raw 0 = Reuters/Verified (Real), raw 1 = Clickbait/Disinformation (Fake).
-    # Invert so: 1 = Real News, 0 = Fake News.
-    df['label'] = 1 - df['label'].astype(int)
+    # If loading raw WELFake (which hasn't been pre-inverted into 0=fake, 1=real)
+    if 'source' not in df.columns and csv_path == config.RAW_DATA_PATH:
+        df['label'] = 1 - df['label'].astype(int)
+    else:
+        df['label'] = df['label'].astype(int)
+        
     return df
 
 def get_stratified_splits(

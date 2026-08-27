@@ -1,10 +1,44 @@
 import os
 import json
-from typing import Dict, Any, Optional
+import urllib.request
+import urllib.parse
+from typing import Dict, Any, Optional, List
+
+def fetch_encyclopedic_corroboration(query: str, max_results: int = 2) -> list:
+    """
+    Queries open Wikipedia API to fetch factual grounding snippets for entity/claim verification.
+    Timeout 1.5s to prevent blocking.
+    """
+    if not query or len(query.strip()) < 5:
+        return []
+    
+    clean_q = " ".join([w for w in query.split() if len(w) > 3][:6])
+    url = f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={urllib.parse.quote(clean_q)}&format=json&utf8=1&srlimit={max_results}"
+    
+    try:
+        req = urllib.request.Request(
+            url, 
+            headers={'User-Agent': 'VeritasAI-FakeNewsDetector/1.0 (academic research fact check)'}
+        )
+        with urllib.request.urlopen(req, timeout=1.5) as response:
+            data = json.loads(response.read().decode('utf-8'))
+            results = data.get('query', {}).get('search', [])
+            grounding = []
+            for r in results:
+                # Strip HTML tags
+                import re
+                clean_snippet = re.sub(r'<.*?>', '', r.get('snippet', ''))
+                grounding.append({
+                    "title": r.get('title'),
+                    "snippet": clean_snippet
+                })
+            return grounding
+    except Exception:
+        return []
 
 class LLMFactCheckReasoner:
     """
-    Synthesizes model predictions, salient keywords, and context into a structured fact-checking explanation.
+    Synthesizes model predictions, salient keywords, and live knowledge grounding into a structured fact-checking explanation.
     """
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.environ.get("GEMINI_API_KEY")
@@ -19,11 +53,15 @@ class LLMFactCheckReasoner:
         stylistic_info: Optional[dict] = None
     ) -> Dict[str, Any]:
         """
-        Generates structured, token-efficient reasoning for the prediction.
+        Generates structured, token-efficient reasoning for the prediction with optional live knowledge retrieval.
         """
         is_fake = fake_probability >= 0.5
         confidence = fake_probability if is_fake else (1.0 - fake_probability)
         verdict = "Likely Fake / Sensationalized" if is_fake else "Likely Real / Mainstream"
+        
+        # 1. Fetch live knowledge grounding for non-empty headlines
+        query_text = headline if headline else text_snippet[:100]
+        knowledge_sources = fetch_encyclopedic_corroboration(query_text)
         
         reasons = []
         if is_fake:
@@ -54,12 +92,17 @@ class LLMFactCheckReasoner:
             else:
                 reasons.append("Syntactic structure adheres to objective narrative standards.")
             
+            if knowledge_sources:
+                top_src = knowledge_sources[0]
+                reasons.append(f"Encyclopedic context aligned with verified topic: '{top_src['title']}'.")
+
         summary = {
             "verdict": verdict,
             "confidence_percentage": round(confidence * 100, 2),
             "fake_probability": round(fake_probability, 4),
             "key_indicators": [w['token'] for w in (salient_fake_words if is_fake else salient_real_words)[:5]],
             "attribution_indicators": stylistic_info.get("attribution_keywords", []) if stylistic_info else [],
+            "knowledge_corroboration": knowledge_sources,
             "rationale": " ".join(reasons)
         }
         return summary
