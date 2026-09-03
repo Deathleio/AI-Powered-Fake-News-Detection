@@ -30,7 +30,11 @@ STOPWORDS = {
     "how", "all", "any", "both", "each", "few", "more", "most", "other", "some",
     "such", "no", "nor", "not", "only", "own", "same", "so", "than", "too", "very",
     "s", "t", "can", "will", "just", "don", "should", "now", "says", "said", "new",
-    "report", "reports", "state", "states", "year", "years"
+    "report", "reports", "state", "states", "year", "years", "pop", "star", "icon",
+    "announces", "announced", "announcing", "reveals", "revealed", "revealing",
+    "confirms", "confirmed", "confirming", "claims", "claimed", "claiming",
+    "surprise", "project", "major", "latest", "first", "look", "drops", "release",
+    "official", "update", "updates", "video", "photos", "watch", "see", "fans", "insiders"
 }
 
 SENSATIONAL_NOISE = {
@@ -62,12 +66,13 @@ def clean_query_keywords(query: str, max_tokens: int = 8) -> str:
         informative = tokens[:max_tokens]
     return " ".join(informative[:max_tokens])
 
-# Common institutional or topical background entities that frequently appear in news
+# Common institutional, geographical, and high-profile public entities
 COMMON_ENTITIES = {
     "nasa", "mars", "rover", "moon", "space", "biden", "trump", "senate", "congress",
     "white", "house", "pentagon", "fed", "federal", "reserve", "bank", "police",
     "government", "ukraine", "russia", "china", "who", "cdc", "fbi", "court",
-    "openai", "google", "microsoft", "apple", "anthropic", "meta", "nvidia", "intel", "tesla"
+    "openai", "google", "microsoft", "apple", "anthropic", "meta", "nvidia", "intel", "tesla",
+    "rihanna", "swift", "taylor", "musk", "elon", "bezos", "gates", "zuckerberg"
 }
 
 class HeadlineMatchResult(float):

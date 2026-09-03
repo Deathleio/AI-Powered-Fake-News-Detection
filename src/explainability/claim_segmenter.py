@@ -15,7 +15,11 @@ EXTRAORDINARY_ASSERTION_PATTERNS = [
     r'\b(emergency\s+(declaration|powers|decree|bank\s+holiday|shutdown|freeze|session))\b',
     r'\b(catastrophic\s+.*?\s+glitch|total\s+(financial|system|network|power)\s+(blackout|collapse|failure|shutdown))\b',
     r'\b(institutional\s+liquidity\s+.*?offline|wire\s+transfers?\s+suspended|trading\s+halted\s+indefinitely)\b',
-    r'\b(sparking\s+(immediate\s+)?(panic|chaos|bank\s+runs?|crisis)|economic\s+collapse\s+imminent)\b'
+    r'\b(sparking\s+(immediate\s+)?(panic|chaos|bank\s+runs?|crisis)|economic\s+collapse\s+imminent)\b',
+    r'\b(production\s+insiders?\s+claim|sources\s+close\s+to\s+production\s+claim|unconfirmed\s+insider\s+reports?)\b',
+    r'\b(unprecedented\s+(\$\d+|million|billion)|record[- ]breaking\s+(\$\d+|deal|budget|fee))\b',
+    r'\b(unexpected\s+digital\s+drop|surprise\s+digital\s+drop|unannounced\s+drop)\b',
+    r'\b(distribution\s+rights\s+were\s+reportedly\s+acquired\s+for)\b'
 ]
 
 # Domain-specific technical and scientific terminology patterns

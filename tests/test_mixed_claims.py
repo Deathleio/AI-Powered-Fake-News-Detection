@@ -151,3 +151,23 @@ def test_partially_fake_who_quarantine_mandate():
     assert res.verdict in ["Partially Fake / Misleading", "Fake News"]
     assert res.veritas_score <= 35
     assert res.fake_probability >= 0.65
+
+def test_partially_fake_rihanna_nolan_movie_rumor():
+    """
+    Verifies that fabricated celebrity blockbuster announcements with unconfirmed insider claims
+    are flagged as Partially Fake / Misleading when no press wires corroborate the project.
+    """
+    title = "Pop Icon Rihanna Announces Surprise Sci-Fi Film Trilogy Co-Directed by Christopher Nolan"
+    text = (
+        "Echoes of Tomorrow. Production insiders claim the project is a collaborative venture co-directed "
+        "by Christopher Nolan, featuring an experimental soundtrack composed entirely by the singer. "
+        "Distribution rights were reportedly acquired by a major streaming platform for an unprecedented $450 million fee, "
+        "with an unexpected digital drop scheduled for next Friday."
+    )
+    req = NewsArticleRequest(title=title, text=text)
+    res = explain_news(req)
+
+    assert res.is_fake is True
+    assert res.verdict in ["Partially Fake / Misleading", "Fake News"]
+    assert res.veritas_score <= 35
+    assert res.fake_probability >= 0.65
