@@ -88,4 +88,7 @@ class FakeNewsPipeline:
 
     @classmethod
     def load(cls, filepath: str) -> "FakeNewsPipeline":
-        return joblib.load(filepath)
+        instance = joblib.load(filepath)
+        if hasattr(instance, 'clf') and not hasattr(instance.clf, 'multi_class'):
+            instance.clf.multi_class = 'auto'
+        return instance

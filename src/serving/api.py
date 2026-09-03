@@ -65,6 +65,9 @@ class ExplainablePredictionResponse(BaseModel):
     highlighted_html: str
     llm_reasoning: dict
     domain_credibility: Optional[dict] = None
+    news_corroboration: Optional[List[dict]] = None
+    news_corroboration_score: Optional[float] = None
+    has_wire_corroboration: Optional[bool] = None
     claims_breakdown: Optional[List[dict]] = None
     extracted_metadata: Optional[dict] = None
 
@@ -85,10 +88,15 @@ def get_model():
         model_pipeline = FakeNewsPipeline.load(model_path)
     return model_pipeline
 
-def compute_hybrid_fake_probability(raw_model_fake_proba: float, stylistic_info: dict, domain_info: Optional[dict] = None) -> float:
+def compute_hybrid_fake_probability(
+    raw_model_fake_proba: float, 
+    stylistic_info: dict, 
+    domain_info: Optional[dict] = None,
+    news_info: Optional[dict] = None
+) -> float:
     """
-    Combines the ML model's statistical probability with domain-invariant stylistic 
-    and journalistic/scientific attribution signals to eliminate lexical shortcut errors.
+    Combines the ML model's statistical probability with domain-invariant stylistic,
+    journalistic/scientific attribution, domain reputation, and live press wire corroboration signals.
     """
     risk = stylistic_info.get("stylistic_fake_risk", 0.0)
     is_all_caps = stylistic_info.get("is_all_caps_title", False) or stylistic_info.get("is_all_caps_body", False)
@@ -127,6 +135,21 @@ def compute_hybrid_fake_probability(raw_model_fake_proba: float, stylistic_info:
             p_fake = max(0.90, p_fake)
         elif domain_info.get("is_verified_journalistic") and risk <= 0.15:
             p_fake = min(p_fake * 0.5, 0.12)
+
+    # 5. Live News Wire Corroboration Engine Weight
+    if news_info:
+        news_score = news_info.get("news_corroboration_score", 0.0)
+        has_wire = news_info.get("has_wire_corroboration", False)
+        total_matches = len(news_info.get("news_corroboration", []))
+        
+        # Multiple verified news wires reported the story with high match overlap
+        if has_wire and news_score >= 0.35 and risk <= 0.20:
+            p_fake = min(p_fake * 0.20, 0.08)
+        elif total_matches >= 3 and news_score >= 0.25 and risk <= 0.15:
+            p_fake = min(p_fake * 0.40, 0.15)
+        # Extreme sensationalism or breaking claim with absolute ZERO press wire coverage
+        elif total_matches == 0 and (sensational_score >= 0.30 or is_all_caps):
+            p_fake = max(0.85, p_fake)
 
     return float(np.clip(p_fake, 0.0001, 0.9999))
 
@@ -180,35 +203,45 @@ def explain_news(request: NewsArticleRequest):
     raw_proba_fake = float(model.predict_proba([fused_text], title_texts=title_only)[0, 0])
     raw_proba_real = float(model.predict_proba([fused_text], title_texts=title_only)[0, 1])
     stylistic_info = extract_stylistic_features(request.title, request.text)
-    proba_fake = compute_hybrid_fake_probability(raw_proba_fake, stylistic_info, domain_info)
+
+    # Initial stylistic estimation
+    prelim_fake = compute_hybrid_fake_probability(raw_proba_fake, stylistic_info, domain_info)
+
+    sensational_words = stylistic_info.get("sensational_keywords", [])
+    saliency = extract_tfidf_word_importance(fused_text, model, top_k=8, sensational_tokens=sensational_words)
+    fake_tokens = [w['token'] for w in saliency['fake_indicators']]
+    real_tokens = [w['token'] for w in saliency['real_indicators']]
+
+    # Synthesize live multi-engine reasoning (Wikipedia + Google News Wire concurrently)
+    reasoning = fact_checker.synthesize_verdict(
+        headline=request.title or "",
+        text_snippet=request.text[:300] if request.text else "",
+        fake_probability=prelim_fake,
+        salient_fake_words=saliency['fake_indicators'],
+        salient_real_words=saliency['real_indicators'],
+        stylistic_info=stylistic_info
+    )
+
+    # Final Ensemble Veracity: integrate news wire corroboration
+    proba_fake = compute_hybrid_fake_probability(raw_proba_fake, stylistic_info, domain_info, news_info=reasoning)
     proba_real = 1.0 - proba_fake
 
     is_fake = proba_fake >= 0.5
     confidence = proba_fake if is_fake else proba_real
     verdict = "Fake News" if is_fake else "Real News"
 
+    # Update reasoning verdict to reflect final ensemble
+    reasoning["verdict"] = "Likely Fake / Sensationalized" if is_fake else "Likely Real / Mainstream"
+    reasoning["fake_probability"] = round(proba_fake, 4)
+    reasoning["confidence_percentage"] = round(confidence * 100, 2)
+
     # Veritas Trust Score: 0 (Severe Disinformation) to 100 (Rock-solid Veracity)
     veritas_score = int(round(proba_real * 100))
 
-    sensational_words = stylistic_info.get("sensational_keywords", [])
-    saliency = extract_tfidf_word_importance(fused_text, model, top_k=8, sensational_tokens=sensational_words)
-    fake_tokens = [w['token'] for w in saliency['fake_indicators']]
-    real_tokens = [w['token'] for w in saliency['real_indicators']]
-    
     raw_snippet = f"{request.title} - {request.text[:400]}" if request.text else (request.title or "")
     highlighted_html = generate_highlighted_html(raw_snippet, fake_tokens, real_tokens)
-    
-    reasoning = fact_checker.synthesize_verdict(
-        headline=request.title or "",
-        text_snippet=request.text[:300] if request.text else "",
-        fake_probability=proba_fake,
-        salient_fake_words=saliency['fake_indicators'],
-        salient_real_words=saliency['real_indicators'],
-        stylistic_info=stylistic_info
-    )
-
     claims_breakdown = segment_and_analyze_claims(request.title or "", request.text or "")
-    
+
     return ExplainablePredictionResponse(
         verdict=verdict,
         fake_probability=round(proba_fake, 4),
@@ -220,9 +253,22 @@ def explain_news(request: NewsArticleRequest):
         highlighted_html=highlighted_html,
         llm_reasoning=reasoning,
         domain_credibility=domain_info,
+        news_corroboration=reasoning.get("news_corroboration", []),
+        news_corroboration_score=reasoning.get("news_corroboration_score", 0.0),
+        has_wire_corroboration=reasoning.get("has_wire_corroboration", False),
         claims_breakdown=claims_breakdown,
         extracted_metadata={"processed_chars": len(fused_text)}
     )
+
+@app.get("/api/v1/extract-url")
+def extract_url_preview(url: str):
+    """
+    Extracts and previews article headline, publisher, author, and text from a web link.
+    """
+    extracted = extract_article_from_url(url)
+    if not extracted.get("success"):
+        raise HTTPException(status_code=422, detail=extracted.get("error", "Unable to extract text from URL."))
+    return extracted
 
 @app.post("/api/v1/analyze-url", response_model=ExplainablePredictionResponse)
 def analyze_url_endpoint(request: UrlArticleRequest):
@@ -236,13 +282,17 @@ def analyze_url_endpoint(request: UrlArticleRequest):
     article_req = NewsArticleRequest(
         title=extracted.get("title", ""),
         text=extracted.get("text", ""),
-        source_url=request.url
+        source_url=extracted.get("url", request.url)
     )
     res = explain_news(article_req)
     res.extracted_metadata = {
-        "url": request.url,
+        "url": extracted.get("url", request.url),
         "domain": extracted.get("domain"),
-        "extracted_title": extracted.get("title")
+        "extracted_title": extracted.get("title"),
+        "author": extracted.get("author"),
+        "published_date": extracted.get("published_date"),
+        "word_count": extracted.get("word_count"),
+        "reading_time_min": extracted.get("reading_time_min")
     }
     return res
 

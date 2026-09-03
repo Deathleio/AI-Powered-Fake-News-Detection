@@ -6,6 +6,16 @@ let currentActiveTab = 'text';
 let lastAnalyzedResult = null;
 let currentAbortController = null;
 
+function escapeHtml(str) {
+    if (!str) return "";
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 const DEMO_PRESETS = {
     nasa: {
         title: "NASA James Webb Space Telescope Detects Water Vapor in Planet-Forming Zone",
@@ -242,6 +252,36 @@ function renderResults(data) {
     trustScoreNum.innerText = trustScore;
     scoreLabelText.innerText = isFake ? "High Risk Rating" : "High Credibility";
 
+    // Extracted Web Article Metadata
+    const urlCard = document.getElementById("urlMetadataCard");
+    if (data.extracted_metadata && data.extracted_metadata.extracted_title) {
+        if (urlCard) {
+            urlCard.style.display = "block";
+            const domainEl = document.getElementById("urlMetaDomain");
+            if (domainEl) domainEl.innerText = data.extracted_metadata.domain || "";
+            const titleEl = document.getElementById("urlMetaTitle");
+            if (titleEl) titleEl.innerText = data.extracted_metadata.extracted_title;
+            
+            const chips = [];
+            if (data.extracted_metadata.author) {
+                chips.push(`<span class="url-meta-chip"><i class="fa-solid fa-user-pen"></i> ${escapeHtml(data.extracted_metadata.author)}</span>`);
+            }
+            if (data.extracted_metadata.published_date) {
+                chips.push(`<span class="url-meta-chip"><i class="fa-solid fa-calendar"></i> ${escapeHtml(data.extracted_metadata.published_date.slice(0, 10))}</span>`);
+            }
+            if (data.extracted_metadata.word_count) {
+                chips.push(`<span class="url-meta-chip"><i class="fa-solid fa-file-lines"></i> ${data.extracted_metadata.word_count} words</span>`);
+            }
+            if (data.extracted_metadata.reading_time_min) {
+                chips.push(`<span class="url-meta-chip"><i class="fa-solid fa-clock"></i> ~${data.extracted_metadata.reading_time_min}m read</span>`);
+            }
+            const chipsEl = document.getElementById("urlMetaChips");
+            if (chipsEl) chipsEl.innerHTML = chips.join("");
+        }
+    } else {
+        if (urlCard) urlCard.style.display = "none";
+    }
+
     // Publisher & Source Reputation
     const pubCard = document.getElementById("publisherCard");
     if (data.domain_credibility && data.domain_credibility.domain !== "Unknown Source") {
@@ -265,9 +305,64 @@ function renderResults(data) {
         data.llm_reasoning.knowledge_corroboration.forEach(k => {
             const chip = document.createElement("div");
             chip.className = "citation-chip";
-            chip.innerHTML = `<i class="fa-solid fa-book-open"></i> <div><strong>${k.title}:</strong> ${k.snippet}</div>`;
+            chip.innerHTML = `<i class="fa-solid fa-book-open"></i> <div><strong>${escapeHtml(k.title)}:</strong> ${escapeHtml(k.snippet)}</div>`;
             citationsDiv.appendChild(chip);
         });
+    }
+
+    // Live News Wire Grounding & Cross-Check
+    const newsWireCard = document.getElementById("newsWireCard");
+    const newsWireList = document.getElementById("newsWireList");
+    const wireStatusBadge = document.getElementById("wireStatusBadge");
+    
+    if (newsWireCard && newsWireList && wireStatusBadge) {
+        const wireArticles = data.news_corroboration || (data.llm_reasoning && data.llm_reasoning.news_corroboration) || [];
+        const hasWire = data.has_wire_corroboration || (data.llm_reasoning && data.llm_reasoning.has_wire_corroboration);
+        
+        if (wireArticles.length > 0) {
+            newsWireCard.style.display = "block";
+            if (hasWire) {
+                wireStatusBadge.className = "wire-status-badge verified";
+                wireStatusBadge.innerHTML = '<i class="fa-solid fa-shield-halved"></i> Wire Verified';
+            } else {
+                wireStatusBadge.className = "wire-status-badge info";
+                wireStatusBadge.innerHTML = `<i class="fa-solid fa-newspaper"></i> ${wireArticles.length} News Reports`;
+            }
+            
+            newsWireList.innerHTML = wireArticles.map(article => {
+                const isWire = article.is_wire_source;
+                const matchScorePct = Math.round(article.match_score * 100);
+                const matchClass = article.match_score >= 0.4 ? "high" : (article.match_score >= 0.2 ? "moderate" : "contextual");
+                
+                return `
+                    <div class="news-wire-item">
+                        <div class="news-wire-top">
+                            <span class="wire-source-tag ${isWire ? 'wire-outlet' : ''}">
+                                <i class="fa-solid ${isWire ? 'fa-certificate' : 'fa-bullhorn'}"></i> ${escapeHtml(article.source)}
+                            </span>
+                            <span class="wire-match-badge ${matchClass}">
+                                ${matchScorePct > 0 ? matchScorePct + '% Match' : escapeHtml(article.match_level)}
+                            </span>
+                        </div>
+                        <a href="${article.link || '#'}" target="_blank" rel="noopener noreferrer" class="wire-headline-link">
+                            ${escapeHtml(article.title)} <i class="fa-solid fa-arrow-up-right-from-square fa-xs"></i>
+                        </a>
+                        ${article.pub_date ? `<span class="wire-date"><i class="fa-regular fa-clock"></i> ${escapeHtml(article.pub_date)}</span>` : ''}
+                    </div>
+                `;
+            }).join("");
+        } else if (isFake) {
+            newsWireCard.style.display = "block";
+            wireStatusBadge.className = "wire-status-badge unverified";
+            wireStatusBadge.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> 0 Wire Reports';
+            newsWireList.innerHTML = `
+                <div class="empty-state" style="padding: 12px; font-size: 0.82rem; color: var(--text-muted); text-align: center;">
+                    <p><i class="fa-solid fa-satellite-dish"></i> No corroborating breaking news or press wire coverage was found for this headline across major international news networks.</p>
+                </div>
+            `;
+        } else {
+            newsWireCard.style.display = "none";
+        }
     }
 
     // Sentence-by-Sentence Breakdown

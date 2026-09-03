@@ -3,6 +3,9 @@ import json
 import urllib.request
 import urllib.parse
 from typing import Dict, Any, Optional, List
+from concurrent.futures import ThreadPoolExecutor
+
+from src.llm_reasoner.news_grounding_engine import fetch_live_news_corroboration
 
 def fetch_encyclopedic_corroboration(query: str, max_results: int = 2) -> list:
     """
@@ -25,7 +28,6 @@ def fetch_encyclopedic_corroboration(query: str, max_results: int = 2) -> list:
             results = data.get('query', {}).get('search', [])
             grounding = []
             for r in results:
-                # Strip HTML tags
                 import re
                 clean_snippet = re.sub(r'<.*?>', '', r.get('snippet', ''))
                 grounding.append({
@@ -53,15 +55,32 @@ class LLMFactCheckReasoner:
         stylistic_info: Optional[dict] = None
     ) -> Dict[str, Any]:
         """
-        Generates structured, token-efficient reasoning for the prediction with optional live knowledge retrieval.
+        Generates structured, token-efficient reasoning for the prediction with concurrent live knowledge & news retrieval.
         """
         is_fake = fake_probability >= 0.5
         confidence = fake_probability if is_fake else (1.0 - fake_probability)
         verdict = "Likely Fake / Sensationalized" if is_fake else "Likely Real / Mainstream"
         
-        # 1. Fetch live knowledge grounding for non-empty headlines
+        # 1. Fetch live knowledge grounding & real-time news wire corroboration concurrently
         query_text = headline if headline else text_snippet[:100]
-        knowledge_sources = fetch_encyclopedic_corroboration(query_text)
+        
+        knowledge_sources = []
+        news_info = {"total_matches": 0, "news_corroboration_score": 0.0, "has_wire_corroboration": False, "top_publishers": [], "articles": []}
+        
+        if query_text and len(query_text.strip()) >= 5:
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                future_wiki = executor.submit(fetch_encyclopedic_corroboration, query_text, 2)
+                future_news = executor.submit(fetch_live_news_corroboration, query_text, 4, 2.0)
+                
+                try:
+                    knowledge_sources = future_wiki.result(timeout=2.2) or []
+                except Exception:
+                    knowledge_sources = []
+                    
+                try:
+                    news_info = future_news.result(timeout=2.2) or news_info
+                except Exception:
+                    pass
         
         reasons = []
         if is_fake:
@@ -78,11 +97,18 @@ class LLMFactCheckReasoner:
             else:
                 reasons.append("Elevated sensational markers and lack of corroborative journalistic framing detected.")
                 
+            if news_info.get("total_matches", 0) == 0:
+                reasons.append("Zero corroborating press wire reports found across major global news agencies, indicating an unverified claim or fabrication.")
+                
             if stylistic_info and stylistic_info.get("attribution_score", 0) == 0:
                 reasons.append("Zero verified journalistic attribution, institutional source citations, or official corroboration found.")
             else:
                 reasons.append("Stylistic tone exhibits informal/alarmist framing characteristic of unverified news.")
         else:
+            if news_info.get("total_matches", 0) > 0:
+                top_pubs = ", ".join(news_info.get("top_publishers", [])[:2])
+                reasons.append(f"Corroborated by {news_info['total_matches']} live press wire reports from recognized outlets ({top_pubs}).")
+                
             if stylistic_info and stylistic_info.get("attribution_keywords"):
                 attrs = ", ".join(stylistic_info["attribution_keywords"][:3])
                 reasons.append(f"Verified authoritative/journalistic attribution detected: '{attrs}'.")
@@ -107,6 +133,9 @@ class LLMFactCheckReasoner:
             "key_indicators": [w['token'] for w in (salient_fake_words if is_fake else salient_real_words)[:5]],
             "attribution_indicators": stylistic_info.get("attribution_keywords", []) if stylistic_info else [],
             "knowledge_corroboration": knowledge_sources,
+            "news_corroboration": news_info.get("articles", []),
+            "news_corroboration_score": news_info.get("news_corroboration_score", 0.0),
+            "has_wire_corroboration": news_info.get("has_wire_corroboration", False),
             "rationale": " ".join(reasons)
         }
         return summary
