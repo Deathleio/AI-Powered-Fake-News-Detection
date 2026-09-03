@@ -169,10 +169,11 @@ def compute_hybrid_fake_probability(
             p_fake = min(p_fake * 0.35, 0.18)
         elif attribution_score >= 0.20 and risk <= 0.15 and p_fake > 0.30:
             p_fake = max(0.12, p_fake - attribution_score * 0.40)
-        # Standard neutral journalistic narrative: gentle smoothing ONLY if model already leans real (< 0.45)
+        # Standard neutral journalistic narrative with ZERO sensationalism:
+        # Calibrates unseen neutral reporting against TF-IDF OOD bias as long as there are NO unverified breakthrough assertions
         elif risk == 0.0 and not sensational_words and not is_all_caps and exclamation_density == 0.0:
-            if p_fake < 0.45:
-                p_fake = min(p_fake * 0.60, 0.25)
+            if p_fake < 0.75:
+                p_fake = min(p_fake * 0.35, 0.18)
 
     return float(np.clip(p_fake, 0.0001, 0.9999))
 

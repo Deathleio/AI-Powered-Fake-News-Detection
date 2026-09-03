@@ -93,3 +93,23 @@ def test_tech_disclosure_sample_is_real():
     assert res.verdict == "Real News"
     assert res.veritas_score >= 80
     assert res.fake_probability <= 0.20
+
+def test_unseen_neutral_exam_security_summit_is_real():
+    """
+    Verifies that unseen, formal journalistic reporting without sensationalism or clickbait
+    is correctly recognized as Real News, not falsely flagged as fake due to OOD TF-IDF bias.
+    """
+    title = "Exam Security Summit Outlines Machine-Based Testing Framework"
+    text = (
+        "physical proctor patrolling toward digital monitoring dashboards, utilizing live virtual "
+        "machines for exam administration and virtual secondary cameras to completely block content capture. "
+        "Crucially, cross-center intelligence networks are being established to correlate cross-session "
+        "behavioral data and systematically dismantle coordinated cheating networks."
+    )
+    req = NewsArticleRequest(title=title, text=text)
+    res = explain_news(req)
+
+    assert res.is_fake is False
+    assert res.verdict == "Real News"
+    assert res.veritas_score >= 80
+    assert res.fake_probability <= 0.20

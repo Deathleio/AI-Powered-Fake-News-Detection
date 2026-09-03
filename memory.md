@@ -39,6 +39,7 @@
   - Resolved OOD false-positives for modern technical disclosures (e.g. OpenAI Astra model vulnerability disclosure) by recognizing corporate/institutional confirmations (`OpenAI confirmed`, `disclosing vulnerabilities`, `system maintainers`).
   - Added structured fallback entity resolution in live news search and softened zero-match reasoning for neutral non-sensational claims.
   - Added automated tests in `tests/test_mixed_claims.py` verifying both partially fake NASA breakthrough and real institutional technical disclosures (24/24 tests passing).
+  - Restored neutral reporting calibration for clean, formal prose without sensationalism (protecting unseen real articles like the Exam Security Summit against OOD TF-IDF bias), while strictly isolating and flagging unverified breakthrough claims (25/25 tests passing).
 
 ---
 
