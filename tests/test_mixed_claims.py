@@ -113,3 +113,22 @@ def test_unseen_neutral_exam_security_summit_is_real():
     assert res.verdict == "Real News"
     assert res.veritas_score >= 80
     assert res.fake_probability <= 0.20
+
+def test_fabricated_financial_crisis_with_spoofed_memo_is_flagged_fake():
+    """
+    Verifies that fabricated national crisis assertions (e.g. Fed suspending wire transfers due to quantum glitch)
+    cannot spoof credibility by inventing formal agency memos (e.g. 'Treasury released a brief memo').
+    """
+    title = "Federal Reserve System Unexpectedly Suspends All Traditional Wire Transfers Due to Catastrophic Quantum Cryptography Glitch"
+    text = (
+        "discrepancies, sparking immediate panic on Wall Street. The Department of the Treasury released a brief memo "
+        "stating that consumer retail banking systems remain secure, but institutional liquidity distribution will remain "
+        "offline until a full system rollback is completed. Verify the operational status updates and official government directives at federalreserve.gov."
+    )
+    req = NewsArticleRequest(title=title, text=text)
+    res = explain_news(req)
+
+    assert res.is_fake is True
+    assert res.verdict in ["Partially Fake / Misleading", "Fake News"]
+    assert res.veritas_score <= 35
+    assert res.fake_probability >= 0.65

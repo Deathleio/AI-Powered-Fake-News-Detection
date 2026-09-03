@@ -40,6 +40,7 @@
   - Added structured fallback entity resolution in live news search and softened zero-match reasoning for neutral non-sensational claims.
   - Added automated tests in `tests/test_mixed_claims.py` verifying both partially fake NASA breakthrough and real institutional technical disclosures (24/24 tests passing).
   - Restored neutral reporting calibration for clean, formal prose without sensationalism (protecting unseen real articles like the Exam Security Summit against OOD TF-IDF bias), while strictly isolating and flagging unverified breakthrough claims (25/25 tests passing).
+  - Added financial crisis & national emergency assertions to `EXTRAORDINARY_ASSERTION_PATTERNS` (e.g. Fed suspending all wire transfers due to quantum glitch), strictly preventing spoofed agency memos ('Treasury released a memo') from bypassing veracity checks without verified wire corroboration (26/26 tests passing).
 
 ---
 

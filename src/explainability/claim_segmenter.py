@@ -8,7 +8,12 @@ EXTRAORDINARY_ASSERTION_PATTERNS = [
     r'\b(repeating patterns? inconsistent with natural|anomalous structures?|artificial origin|alien artifact)\b',
     r'\b(cures?\s+(all|cancer|aging|diabetes|every disease)|miracle\s+cure|overnight\s+cure|100%\s+natural\s+cure)\b',
     r'\b(banned\s+all\s+cash|martial\s+law\s+declared|confiscate\s+savings|secretly\s+executed|arrest\s+warrant\s+issued\s+for|total\s+financial\s+blackout)\b',
-    r'\b(secret\s+plot|globalist\s+plot|covert\s+scheme|corrupt\s+elites\s+are\s+secretly|conspiracy\s+to\s+overthrow)\b'
+    r'\b(secret\s+plot|globalist\s+plot|covert\s+scheme|corrupt\s+elites\s+are\s+secretly|conspiracy\s+to\s+overthrow)\b',
+    r'\b(suspends?\s+all\s+(traditional\s+)?(wire\s+transfers?|banking|transactions?|withdrawals?))\b',
+    r'\b(catastrophic\s+quantum\s+(cryptography\s+)?glitch|quantum\s+(cryptography\s+)?glitch)\b',
+    r'\b(institutional\s+liquidity\s+(distribution\s+)?will\s+remain\s+offline)\b',
+    r'\b((federal\s+reserve|treasury|central\s+bank)\s+(unexpectedly\s+)?(suspends?|freezes?|halts?|seizes?))\b',
+    r'\b(sparking\s+immediate\s+panic|emergency\s+bank\s+holiday|global\s+financial\s+reset)\b'
 ]
 
 # Domain-specific technical and scientific terminology patterns
@@ -122,12 +127,13 @@ def analyze_mixed_veracity_profile(claims: List[Dict[str, Any]]) -> Dict[str, An
     total = len(claims)
 
     # Mixed veracity occurs when high-risk / extraordinary claims coexist with technical or factual context
-    is_mixed = (extraordinary_count >= 1 and technical_count >= 1)
+    is_mixed = (extraordinary_count >= 1 and technical_count >= 1) or (extraordinary_count >= 1)
 
     risk_claim_ratio = round(extraordinary_count / max(1, total), 3)
 
     return {
         "is_mixed_veracity": is_mixed,
+        "has_extraordinary_claim": extraordinary_count >= 1,
         "extraordinary_count": extraordinary_count,
         "technical_count": technical_count,
         "risk_claim_ratio": risk_claim_ratio

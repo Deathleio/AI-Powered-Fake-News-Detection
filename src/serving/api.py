@@ -155,14 +155,21 @@ def compute_hybrid_fake_probability(
             p_fake = max(0.85, p_fake)
 
     # 4. Mixed Veracity / Hybrid Disinformation Adjustment
-    if mixed_info and mixed_info.get("is_mixed_veracity"):
-        # The article mixes authentic technical jargon with unverified extraordinary claims
-        p_fake = max(p_fake, 0.72)
+    has_extraordinary = bool(mixed_info and (mixed_info.get("is_mixed_veracity") or mixed_info.get("has_extraordinary_claim")))
+    if has_extraordinary:
+        # The article asserts an extraordinary breakthrough or crisis assertion
+        p_fake = max(p_fake, 0.76)
 
-    # 5. Attributed scientific / institutional citations (ONLY apply if NOT mixed veracity and NOT topic_absent)
-    is_unverified_breakthrough = topic_absent or (mixed_info and mixed_info.get("is_mixed_veracity", False))
+    # 5. Attributed scientific / institutional citations (ONLY apply if NOT an unverified breakthrough/crisis claim)
+    is_unverified_breakthrough = topic_absent or has_extraordinary
 
-    if not is_unverified_breakthrough:
+    if is_unverified_breakthrough:
+        # Extraordinary claims require verified press wire corroboration; attribution text cannot override this
+        has_wire = news_info and news_info.get("has_wire_corroboration", False)
+        has_claim = news_info and news_info.get("has_claim_corroboration", False)
+        if not (has_wire and has_claim):
+            p_fake = max(p_fake, 0.76)
+    else:
         if attribution_score >= 0.70 and risk == 0.0:
             p_fake = min(p_fake * 0.20, 0.08)
         elif attribution_score >= 0.35 and risk <= 0.10:
