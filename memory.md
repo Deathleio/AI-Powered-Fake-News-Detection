@@ -36,7 +36,9 @@
   - Added extraordinary breakthrough claim detection & mixed profile analysis in `src/explainability/claim_segmenter.py`.
   - Introduced 3-tier veracity classification (`Partially Fake / Misleading` alongside Real and Fake) with calibrated trust scores (28/100 risk rating for mixed claims).
   - Added UI amber caution banner for partially fake articles in frontend.
-  - Added automated test suite `tests/test_mixed_claims.py` (23/23 tests passing).
+  - Resolved OOD false-positives for modern technical disclosures (e.g. OpenAI Astra model vulnerability disclosure) by recognizing corporate/institutional confirmations (`OpenAI confirmed`, `disclosing vulnerabilities`, `system maintainers`).
+  - Added structured fallback entity resolution in live news search and softened zero-match reasoning for neutral non-sensational claims.
+  - Added automated tests in `tests/test_mixed_claims.py` verifying both partially fake NASA breakthrough and real institutional technical disclosures (24/24 tests passing).
 
 ---
 
