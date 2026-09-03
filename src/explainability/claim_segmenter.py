@@ -19,7 +19,10 @@ EXTRAORDINARY_ASSERTION_PATTERNS = [
     r'\b(production\s+insiders?\s+claim|sources\s+close\s+to\s+production\s+claim|unconfirmed\s+insider\s+reports?)\b',
     r'\b(unprecedented\s+(\$\d+|million|billion)|record[- ]breaking\s+(\$\d+|deal|budget|fee))\b',
     r'\b(unexpected\s+digital\s+drop|surprise\s+digital\s+drop|unannounced\s+drop)\b',
-    r'\b(distribution\s+rights\s+were\s+reportedly\s+acquired\s+for)\b'
+    r'\b(distribution\s+rights\s+were\s+reportedly\s+acquired\s+for)\b',
+    r'\b(replaces?\s+(all\s+)?(paper\s+)?currency\s+with\s+(sovereign\s+)?(physical\s+)?(gold|silver|tokens?|crypto))\b',
+    r'\b((gold|silver|asset)[- ]backed\s+(tokens?|currency|monetary\s+standard|dollar|franc|euro))\b',
+    r'\b(return(ing)?\s+to\s+(the\s+)?gold\s+standard|abolish(es|ed|ing)?\s+(all\s+)?paper\s+(money|currency))\b'
 ]
 
 # Domain-specific technical and scientific terminology patterns

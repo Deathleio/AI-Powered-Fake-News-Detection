@@ -94,6 +94,14 @@ class HeadlineMatchResult(float):
         yield self.match_level
         yield self.claim_matched
 
+NATION_ENTITIES = {
+    "switzerland", "swiss", "syria", "syrian", "uk", "britain", "british", "england", "english",
+    "us", "usa", "america", "american", "china", "chinese", "russia", "russian",
+    "japan", "japanese", "germany", "german", "france", "french", "india", "indian",
+    "canada", "canadian", "australia", "australian", "israel", "israeli", "iran", "iranian",
+    "turkey", "turkish", "brazil", "brazilian", "mexico", "mexican", "italy", "italian"
+}
+
 def calculate_headline_similarity(query: str, headline: str) -> HeadlineMatchResult:
     """
     Computes a hybrid lexical overlap and entity match score between query and headline.
@@ -113,6 +121,12 @@ def calculate_headline_similarity(query: str, headline: str) -> HeadlineMatchRes
     if not intersection:
         return HeadlineMatchResult(0.0, "No Match", False)
 
+    # Disallow cross-national entity confusion (e.g. Syrian central bank cannot corroborate Swiss central bank)
+    q_nations = q_tokens.intersection(NATION_ENTITIES)
+    h_nations = h_tokens.intersection(NATION_ENTITIES)
+    if q_nations and h_nations and not q_nations.intersection(h_nations):
+        return HeadlineMatchResult(0.0, "No Match", False)
+
     # Separate background entities from core claim assertion tokens
     claim_tokens = {t for t in q_tokens if t not in COMMON_ENTITIES}
     claim_intersection = claim_tokens.intersection(h_tokens) if claim_tokens else set()
@@ -125,14 +139,12 @@ def calculate_headline_similarity(query: str, headline: str) -> HeadlineMatchRes
     # Claim coverage: how many of the non-background claim predicates are in the headline
     claim_coverage = len(claim_intersection) / len(claim_tokens) if claim_tokens else query_coverage
 
-    # If the user made a specific claim (e.g. "fossilised biological structures", "cures all", "ban cash")
-    # but the headline matches ONLY background entities (e.g. "NASA", "Rover", "Mars"),
-    # this is topic coverage, NOT claim corroboration!
+    # Claim must have substantive coverage of assertion predicates
     claim_matched = False
     if claim_tokens:
-        if len(claim_intersection) >= 2 or (len(claim_tokens) == 1 and len(claim_intersection) == 1):
+        if len(claim_tokens) <= 2 and len(claim_intersection) >= 1:
             claim_matched = True
-        elif claim_coverage >= 0.40:
+        elif len(claim_intersection) >= 3 or claim_coverage >= 0.40:
             claim_matched = True
 
     if claim_matched:

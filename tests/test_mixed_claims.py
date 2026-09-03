@@ -171,3 +171,21 @@ def test_partially_fake_rihanna_nolan_movie_rumor():
     assert res.verdict in ["Partially Fake / Misleading", "Fake News"]
     assert res.veritas_score <= 35
     assert res.fake_probability >= 0.65
+
+def test_partially_fake_swiss_central_bank_gold_tokens():
+    """
+    Verifies that fabricated monetary overhaul / gold-backed token claims regarding a central bank
+    are recognized as Partially Fake / Misleading, rejecting unrelated foreign bank articles (e.g. Syrian).
+    """
+    title = "Central Bank of Switzerland Replaces Paper Currency with Sovereign Physical Gold-Backed Tokens"
+    text = (
+        "The Central Bank of Switzerland (Swiss National Bank) announced today that it will replace all "
+        "circulating paper currency with sovereign physical gold-backed tokens, establishing a new monetary standard."
+    )
+    req = NewsArticleRequest(title=title, text=text)
+    res = explain_news(req)
+
+    assert res.is_fake is True
+    assert res.verdict in ["Partially Fake / Misleading", "Fake News"]
+    assert res.veritas_score <= 35
+    assert res.fake_probability >= 0.65
