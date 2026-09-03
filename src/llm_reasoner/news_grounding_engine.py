@@ -140,9 +140,15 @@ def calculate_headline_similarity(query: str, headline: str) -> HeadlineMatchRes
         else:
             match_level = "Contextual Related"
     else:
-        # Topic matched but the core claim assertion was absent
-        score = float(round(min(0.18, 0.25 * query_coverage), 3))
-        match_level = "Topic Only (Claim Absent)"
+        # Only classify as Topic Only if actual background entities were matched
+        entity_tokens = {t for t in q_tokens if t in COMMON_ENTITIES}
+        entity_match = bool(entity_tokens.intersection(h_tokens))
+        if entity_match and query_coverage >= 0.15:
+            score = float(round(min(0.18, 0.25 * query_coverage), 3))
+            match_level = "Topic Only (Claim Absent)"
+        else:
+            score = 0.0
+            match_level = "No Match"
 
     return HeadlineMatchResult(score, match_level, claim_matched)
 
@@ -249,8 +255,9 @@ def fetch_live_news_corroboration(query: str, max_results: int = 4, timeout: flo
         wire_bonus = 0.15 if wire_corroborating_count > 0 else 0.0
         corroboration_score = round(min(base_score + volume_bonus + wire_bonus, 1.0), 3)
 
-    # Flag: topic was found in news / wire coverage, but 0 articles corroborated the specific claim
-    topic_covered_claim_absent = (len(articles) > 0 and not any_claim_corroborated)
+    # Flag: topic entities were found in news / wire coverage, but 0 articles corroborated the specific claim
+    has_topic_match = any(a.get("match_level") == "Topic Only (Claim Absent)" for a in articles)
+    topic_covered_claim_absent = (has_topic_match and not any_claim_corroborated)
         
     return {
         "total_matches": len(articles),

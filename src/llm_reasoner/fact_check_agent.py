@@ -104,12 +104,12 @@ class LLMFactCheckReasoner:
 
         if is_fake:
             if topic_absent:
-                reasons.append("Topic entities (e.g. agency rovers or institutions) are actively reported in current news, but the specific breakthrough claim is absent from all wire reports, indicating an unverified or fabricated assertion.")
-            elif news_info.get("total_matches", 0) == 0:
+                reasons.append("Topic entities (e.g. agency or institutions) are actively reported in current news, but the specific high-impact claim is absent from all wire reports, indicating an unverified or fabricated assertion.")
+            elif not has_claim_corrob:
                 if stylistic_info and (stylistic_info.get("is_all_caps_title") or stylistic_info.get("sensational_keywords")):
                     reasons.append("Zero corroborating press wire reports found across major global news agencies, indicating an unverified claim or fabrication.")
                 else:
-                    reasons.append("No corroborating press wire reports located in active news feeds.")
+                    reasons.append("Zero corroborating press wire reports found across major global news agencies for this breaking assertion.")
 
             if stylistic_info and (stylistic_info.get("is_all_caps_title") or stylistic_info.get("is_all_caps_body")):
                 reasons.append("Extreme capitalization (all-caps shouting) identified, characteristic of sensationalist / clickbait claims.")

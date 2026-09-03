@@ -132,3 +132,22 @@ def test_fabricated_financial_crisis_with_spoofed_memo_is_flagged_fake():
     assert res.verdict in ["Partially Fake / Misleading", "Fake News"]
     assert res.veritas_score <= 35
     assert res.fake_probability >= 0.65
+
+def test_partially_fake_who_quarantine_mandate():
+    """
+    Verifies that uncorroborated institutional emergency mandates (e.g. WHO mandating quarantine)
+    are recognized as Partially Fake / Misleading dispatches.
+    """
+    title = "WHO Abruptly Mandates Worldwide Quarantine for Respiratory Strain"
+    text = (
+        "The World Health Organization announced in an emergency session that member states must initiate "
+        "mandatory 14-day international border closures and travel quarantines immediately following detected "
+        "mutations in a novel respiratory strain."
+    )
+    req = NewsArticleRequest(title=title, text=text)
+    res = explain_news(req)
+
+    assert res.is_fake is True
+    assert res.verdict in ["Partially Fake / Misleading", "Fake News"]
+    assert res.veritas_score <= 35
+    assert res.fake_probability >= 0.65

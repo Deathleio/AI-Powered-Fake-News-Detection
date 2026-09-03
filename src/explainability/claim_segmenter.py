@@ -4,16 +4,18 @@ from typing import List, Dict, Any, Tuple
 # Patterns that indicate extraordinary, unverified breakthrough assertions or sensational claims
 EXTRAORDINARY_ASSERTION_PATTERNS = [
     r'\b(confirms?|proves?|reveals?|discovered?|uncovered?|evidence of)\s+.*?(fossil|fossilised|fossils|alien|biological structures?|extraterrestrial|ancient alien|miracle|secret)\b',
-    r'\b(fossilised|fossilized)\s+(biological|remains|structures?|specimen|microorganisms?)\b',
+    r'\b(fossilised|fossilized|extraterrestrial)\s+(biological|remains|structures?|specimen|microorganisms?|life)\b',
     r'\b(repeating patterns? inconsistent with natural|anomalous structures?|artificial origin|alien artifact)\b',
     r'\b(cures?\s+(all|cancer|aging|diabetes|every disease)|miracle\s+cure|overnight\s+cure|100%\s+natural\s+cure)\b',
     r'\b(banned\s+all\s+cash|martial\s+law\s+declared|confiscate\s+savings|secretly\s+executed|arrest\s+warrant\s+issued\s+for|total\s+financial\s+blackout)\b',
     r'\b(secret\s+plot|globalist\s+plot|covert\s+scheme|corrupt\s+elites\s+are\s+secretly|conspiracy\s+to\s+overthrow)\b',
-    r'\b(suspends?\s+all\s+(traditional\s+)?(wire\s+transfers?|banking|transactions?|withdrawals?))\b',
-    r'\b(catastrophic\s+quantum\s+(cryptography\s+)?glitch|quantum\s+(cryptography\s+)?glitch)\b',
-    r'\b(institutional\s+liquidity\s+(distribution\s+)?will\s+remain\s+offline)\b',
-    r'\b((federal\s+reserve|treasury|central\s+bank)\s+(unexpectedly\s+)?(suspends?|freezes?|halts?|seizes?))\b',
-    r'\b(sparking\s+immediate\s+panic|emergency\s+bank\s+holiday|global\s+financial\s+reset)\b'
+    r'\b(unexpectedly|abruptly|unannounced|secretly|emergency)\s+(suspends?|halts?|freezes?|bans?|orders?|mandates?|cancels?|seizes?|restricts?|revokes?)\b',
+    r'\b(suspends?|halts?|freezes?|bans?|orders?|mandates?|cancels?|seizes?|recalls?)\s+all\s+\w+\b',
+    r'\b(mandatory\s+(quarantine|vaccination|curfew|evacuation|lockdown|recall|handover|buyback))\b',
+    r'\b(emergency\s+(declaration|powers|decree|bank\s+holiday|shutdown|freeze|session))\b',
+    r'\b(catastrophic\s+.*?\s+glitch|total\s+(financial|system|network|power)\s+(blackout|collapse|failure|shutdown))\b',
+    r'\b(institutional\s+liquidity\s+.*?offline|wire\s+transfers?\s+suspended|trading\s+halted\s+indefinitely)\b',
+    r'\b(sparking\s+(immediate\s+)?(panic|chaos|bank\s+runs?|crisis)|economic\s+collapse\s+imminent)\b'
 ]
 
 # Domain-specific technical and scientific terminology patterns
@@ -109,31 +111,39 @@ def segment_and_analyze_claims(title: str, text: str) -> List[Dict[str, Any]]:
         
     return claims
 
-def analyze_mixed_veracity_profile(claims: List[Dict[str, Any]]) -> Dict[str, Any]:
+def analyze_mixed_veracity_profile(claims: List[Dict[str, Any]], title: str = "", text: str = "") -> Dict[str, Any]:
     """
     Evaluates whether an article demonstrates hybrid disinformation:
     blending legitimate technical context with unverified extraordinary claims.
     """
-    if not claims:
+    full_text = f"{title} {text}".lower()
+    has_high_impact = any(bool(re.search(pat, full_text)) for pat in EXTRAORDINARY_ASSERTION_PATTERNS)
+
+    if not claims and not has_high_impact:
         return {
             "is_mixed_veracity": False,
+            "has_extraordinary_claim": False,
             "extraordinary_count": 0,
             "technical_count": 0,
             "risk_claim_ratio": 0.0
         }
 
     extraordinary_count = sum(1 for c in claims if c.get("is_extraordinary") or c.get("risk_level") == "High Risk")
+    if has_high_impact and extraordinary_count == 0:
+        extraordinary_count = 1
+
     technical_count = sum(1 for c in claims if c.get("category") in ["Technical Domain Context", "Verified Sourced Statement"])
-    total = len(claims)
+    total = max(1, len(claims))
 
     # Mixed veracity occurs when high-risk / extraordinary claims coexist with technical or factual context
     is_mixed = (extraordinary_count >= 1 and technical_count >= 1) or (extraordinary_count >= 1)
 
-    risk_claim_ratio = round(extraordinary_count / max(1, total), 3)
+    risk_claim_ratio = round(extraordinary_count / total, 3)
 
     return {
         "is_mixed_veracity": is_mixed,
         "has_extraordinary_claim": extraordinary_count >= 1,
+        "has_high_impact_assertion": has_high_impact,
         "extraordinary_count": extraordinary_count,
         "technical_count": technical_count,
         "risk_claim_ratio": risk_claim_ratio

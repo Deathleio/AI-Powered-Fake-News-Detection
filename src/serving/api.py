@@ -207,7 +207,7 @@ def predict_news(request: NewsArticleRequest):
     raw_proba_real = float(model.predict_proba([fused_text], title_texts=title_only)[0, 1])
     stylistic_info = extract_stylistic_features(request.title, request.text)
     claims_breakdown = segment_and_analyze_claims(request.title or "", request.text or "")
-    mixed_info = analyze_mixed_veracity_profile(claims_breakdown)
+    mixed_info = analyze_mixed_veracity_profile(claims_breakdown, title=request.title or "", text=request.text or "")
 
     proba_fake = compute_hybrid_fake_probability(raw_proba_fake, stylistic_info, domain_info, mixed_info=mixed_info)
     proba_real = 1.0 - proba_fake
@@ -252,7 +252,7 @@ def explain_news(request: NewsArticleRequest):
     stylistic_info = extract_stylistic_features(request.title, request.text)
 
     claims_breakdown = segment_and_analyze_claims(request.title or "", request.text or "")
-    mixed_info = analyze_mixed_veracity_profile(claims_breakdown)
+    mixed_info = analyze_mixed_veracity_profile(claims_breakdown, title=request.title or "", text=request.text or "")
 
     # Initial stylistic estimation
     prelim_fake = compute_hybrid_fake_probability(raw_proba_fake, stylistic_info, domain_info, mixed_info=mixed_info)
