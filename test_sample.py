@@ -1,4 +1,4 @@
-﻿import sys
+import sys
 import os
 import argparse
 
@@ -41,7 +41,7 @@ DEMO_SAMPLES = [
 def format_tokens(token_list):
     return ", ".join([t['token'] + " (" + str(t['weight']) + ")" for t in token_list])
 
-def test_article(title: str, text: str):
+def evaluate_article(title: str, text: str):
     req = NewsArticleRequest(title=title, text=text)
     res = explain_news(req)
     
@@ -75,14 +75,14 @@ def main():
     args = parser.parse_args()
     
     if args.title or args.text:
-        test_article(args.title or "", args.text or "")
+        evaluate_article(args.title or "", args.text or "")
     else:
         print("\n=======================================================")
         print("[*] RUNNING DEMO SAMPLES THROUGH TRAINED MODEL")
         print("=======================================================")
         for i, sample in enumerate(DEMO_SAMPLES, 1):
             print(f"\n[Test Case {i}/4] Type: {sample['category']} (Expected: {sample['expected']})")
-            test_article(sample["title"], sample["text"])
+            evaluate_article(sample["title"], sample["text"])
 
 if __name__ == '__main__':
     main()

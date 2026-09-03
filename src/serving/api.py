@@ -15,7 +15,7 @@ from src.explainability.token_saliency import extract_tfidf_word_importance, gen
 from src.llm_reasoner.fact_check_agent import LLMFactCheckReasoner
 from src.credibility.domain_registry import evaluate_publisher_credibility
 from src.data.url_extractor import extract_article_from_url
-from src.explainability.claim_segmenter import segment_and_analyze_claims
+from src.explainability.claim_segmenter import segment_and_analyze_claims, analyze_mixed_veracity_profile
 
 app = FastAPI(
     title="VeritasAI Enterprise Veracity Intelligence API",
@@ -50,15 +50,19 @@ class FeedbackRequest(BaseModel):
 
 class PredictionResponse(BaseModel):
     verdict: str
+    verdict_tier: str = "fake"  # "real", "partially_fake", "fake"
     fake_probability: float
     confidence_percentage: float
     is_fake: bool
+    is_partially_fake: bool = False
 
 class ExplainablePredictionResponse(BaseModel):
     verdict: str
+    verdict_tier: str = "fake"  # "real", "partially_fake", "fake"
     fake_probability: float
     confidence_percentage: float
     is_fake: bool
+    is_partially_fake: bool = False
     veritas_score: int
     fake_indicators: List[dict]
     real_indicators: List[dict]
@@ -68,6 +72,8 @@ class ExplainablePredictionResponse(BaseModel):
     news_corroboration: Optional[List[dict]] = None
     news_corroboration_score: Optional[float] = None
     has_wire_corroboration: Optional[bool] = None
+    has_claim_corroboration: Optional[bool] = None
+    topic_covered_claim_absent: Optional[bool] = None
     claims_breakdown: Optional[List[dict]] = None
     extracted_metadata: Optional[dict] = None
 
@@ -92,11 +98,13 @@ def compute_hybrid_fake_probability(
     raw_model_fake_proba: float, 
     stylistic_info: dict, 
     domain_info: Optional[dict] = None,
-    news_info: Optional[dict] = None
+    news_info: Optional[dict] = None,
+    mixed_info: Optional[dict] = None
 ) -> float:
     """
     Combines the ML model's statistical probability with domain-invariant stylistic,
-    journalistic/scientific attribution, domain reputation, and live press wire corroboration signals.
+    journalistic/scientific attribution, domain reputation, live press wire corroboration signals,
+    and mixed-veracity claim analysis.
     """
     risk = stylistic_info.get("stylistic_fake_risk", 0.0)
     is_all_caps = stylistic_info.get("is_all_caps_title", False) or stylistic_info.get("is_all_caps_body", False)
@@ -115,19 +123,7 @@ def compute_hybrid_fake_probability(
     if exclamation_density > 0.05 and risk >= 0.25 and p_fake < 0.65:
         p_fake = max(p_fake, 0.65 + risk * 0.25)
 
-    # 2. Authentic scientific, academic, institutional, or journalistic attribution with NO sensationalism
-    if attribution_score >= 0.70 and risk == 0.0:
-        p_fake = min(p_fake * 0.15, 0.05)
-    elif attribution_score >= 0.35 and risk <= 0.10:
-        p_fake = min(p_fake * 0.30, 0.18)
-    elif attribution_score >= 0.20 and risk <= 0.15 and p_fake > 0.30:
-        p_fake = max(0.08, p_fake - attribution_score * 0.45)
-    # 3. Standard neutral journalistic narrative with ZERO sensationalism and clean syntax
-    elif risk == 0.0 and not sensational_words and not is_all_caps and exclamation_density == 0.0:
-        if p_fake < 0.72:
-            p_fake = min(p_fake * 0.35, 0.18)
-
-    # 4. Domain registry weight
+    # 2. Domain registry weight
     if domain_info:
         if domain_info.get("is_satire"):
             p_fake = max(0.85, p_fake)
@@ -136,20 +132,47 @@ def compute_hybrid_fake_probability(
         elif domain_info.get("is_verified_journalistic") and risk <= 0.15:
             p_fake = min(p_fake * 0.5, 0.12)
 
-    # 5. Live News Wire Corroboration Engine Weight
+    # 3. Live News Wire Corroboration Engine Weight
+    has_claim = False
+    topic_absent = False
     if news_info:
         news_score = news_info.get("news_corroboration_score", 0.0)
         has_wire = news_info.get("has_wire_corroboration", False)
+        has_claim = news_info.get("has_claim_corroboration", False)
+        topic_absent = news_info.get("topic_covered_claim_absent", False)
         total_matches = len(news_info.get("news_corroboration", []))
         
-        # Multiple verified news wires reported the story with high match overlap
-        if has_wire and news_score >= 0.35 and risk <= 0.20:
+        # Multiple verified news wires reported the story with genuine claim overlap
+        if has_wire and has_claim and news_score >= 0.35 and risk <= 0.20:
             p_fake = min(p_fake * 0.20, 0.08)
-        elif total_matches >= 3 and news_score >= 0.25 and risk <= 0.15:
+        elif has_claim and total_matches >= 3 and news_score >= 0.25 and risk <= 0.15:
             p_fake = min(p_fake * 0.40, 0.15)
+        # Extraordinary claim where topic is reported on wires, but breakthrough claim is ABSENT from all wires
+        elif topic_absent:
+            p_fake = max(p_fake, 0.76)
         # Extreme sensationalism or breaking claim with absolute ZERO press wire coverage
         elif total_matches == 0 and (sensational_score >= 0.30 or is_all_caps):
             p_fake = max(0.85, p_fake)
+
+    # 4. Mixed Veracity / Hybrid Disinformation Adjustment
+    if mixed_info and mixed_info.get("is_mixed_veracity"):
+        # The article mixes authentic technical jargon with unverified extraordinary claims
+        p_fake = max(p_fake, 0.72)
+
+    # 5. Attributed scientific / institutional citations (ONLY apply if NOT mixed veracity and NOT topic_absent)
+    is_unverified_breakthrough = topic_absent or (mixed_info and mixed_info.get("is_mixed_veracity", False))
+
+    if not is_unverified_breakthrough:
+        if attribution_score >= 0.70 and risk == 0.0:
+            p_fake = min(p_fake * 0.20, 0.08)
+        elif attribution_score >= 0.35 and risk <= 0.10:
+            p_fake = min(p_fake * 0.35, 0.18)
+        elif attribution_score >= 0.20 and risk <= 0.15 and p_fake > 0.30:
+            p_fake = max(0.12, p_fake - attribution_score * 0.40)
+        # Standard neutral journalistic narrative: gentle smoothing ONLY if model already leans real (< 0.45)
+        elif risk == 0.0 and not sensational_words and not is_all_caps and exclamation_density == 0.0:
+            if p_fake < 0.45:
+                p_fake = min(p_fake * 0.60, 0.25)
 
     return float(np.clip(p_fake, 0.0001, 0.9999))
 
@@ -175,18 +198,34 @@ def predict_news(request: NewsArticleRequest):
     raw_proba_fake = float(model.predict_proba([fused_text], title_texts=title_only)[0, 0])
     raw_proba_real = float(model.predict_proba([fused_text], title_texts=title_only)[0, 1])
     stylistic_info = extract_stylistic_features(request.title, request.text)
-    proba_fake = compute_hybrid_fake_probability(raw_proba_fake, stylistic_info, domain_info)
+    claims_breakdown = segment_and_analyze_claims(request.title or "", request.text or "")
+    mixed_info = analyze_mixed_veracity_profile(claims_breakdown)
+
+    proba_fake = compute_hybrid_fake_probability(raw_proba_fake, stylistic_info, domain_info, mixed_info=mixed_info)
     proba_real = 1.0 - proba_fake
 
     is_fake = proba_fake >= 0.5
+    is_partially_fake = is_fake and mixed_info.get("is_mixed_veracity", False)
+
+    if is_partially_fake:
+        verdict = "Partially Fake / Misleading"
+        verdict_tier = "partially_fake"
+    elif is_fake:
+        verdict = "Fake News"
+        verdict_tier = "fake"
+    else:
+        verdict = "Real News"
+        verdict_tier = "real"
+
     confidence = proba_fake if is_fake else proba_real
-    verdict = "Fake News" if is_fake else "Real News"
 
     return PredictionResponse(
         verdict=verdict,
+        verdict_tier=verdict_tier,
         fake_probability=round(proba_fake, 4),
         confidence_percentage=round(confidence * 100, 2),
-        is_fake=is_fake
+        is_fake=is_fake,
+        is_partially_fake=is_partially_fake
     )
 
 @app.post("/explain", response_model=ExplainablePredictionResponse)
@@ -204,8 +243,11 @@ def explain_news(request: NewsArticleRequest):
     raw_proba_real = float(model.predict_proba([fused_text], title_texts=title_only)[0, 1])
     stylistic_info = extract_stylistic_features(request.title, request.text)
 
+    claims_breakdown = segment_and_analyze_claims(request.title or "", request.text or "")
+    mixed_info = analyze_mixed_veracity_profile(claims_breakdown)
+
     # Initial stylistic estimation
-    prelim_fake = compute_hybrid_fake_probability(raw_proba_fake, stylistic_info, domain_info)
+    prelim_fake = compute_hybrid_fake_probability(raw_proba_fake, stylistic_info, domain_info, mixed_info=mixed_info)
 
     sensational_words = stylistic_info.get("sensational_keywords", [])
     saliency = extract_tfidf_word_importance(fused_text, model, top_k=8, sensational_tokens=sensational_words)
@@ -222,31 +264,55 @@ def explain_news(request: NewsArticleRequest):
         stylistic_info=stylistic_info
     )
 
-    # Final Ensemble Veracity: integrate news wire corroboration
-    proba_fake = compute_hybrid_fake_probability(raw_proba_fake, stylistic_info, domain_info, news_info=reasoning)
+    # Final Ensemble Veracity: integrate news wire corroboration + mixed veracity
+    proba_fake = compute_hybrid_fake_probability(
+        raw_proba_fake, stylistic_info, domain_info, news_info=reasoning, mixed_info=mixed_info
+    )
     proba_real = 1.0 - proba_fake
 
     is_fake = proba_fake >= 0.5
+    is_partially_fake = is_fake and mixed_info.get("is_mixed_veracity", False)
+
+    if is_partially_fake:
+        verdict = "Partially Fake / Misleading"
+        verdict_tier = "partially_fake"
+    elif is_fake:
+        verdict = "Fake News"
+        verdict_tier = "fake"
+    else:
+        verdict = "Real News"
+        verdict_tier = "real"
+
     confidence = proba_fake if is_fake else proba_real
-    verdict = "Fake News" if is_fake else "Real News"
 
     # Update reasoning verdict to reflect final ensemble
-    reasoning["verdict"] = "Likely Fake / Sensationalized" if is_fake else "Likely Real / Mainstream"
+    if is_partially_fake:
+        reasoning["verdict"] = "Partially Fake / Misleading (Mixed Real & Unverified Claims)"
+    elif is_fake:
+        reasoning["verdict"] = "Likely Fake / Sensationalized"
+    else:
+        reasoning["verdict"] = "Likely Real / Mainstream"
+
     reasoning["fake_probability"] = round(proba_fake, 4)
     reasoning["confidence_percentage"] = round(confidence * 100, 2)
+    reasoning["is_mixed_veracity"] = is_partially_fake
 
     # Veritas Trust Score: 0 (Severe Disinformation) to 100 (Rock-solid Veracity)
-    veritas_score = int(round(proba_real * 100))
+    if is_partially_fake:
+        veritas_score = int(round(max(15, min(35, proba_real * 100))))
+    else:
+        veritas_score = int(round(proba_real * 100))
 
     raw_snippet = f"{request.title} - {request.text[:400]}" if request.text else (request.title or "")
     highlighted_html = generate_highlighted_html(raw_snippet, fake_tokens, real_tokens)
-    claims_breakdown = segment_and_analyze_claims(request.title or "", request.text or "")
 
     return ExplainablePredictionResponse(
         verdict=verdict,
+        verdict_tier=verdict_tier,
         fake_probability=round(proba_fake, 4),
         confidence_percentage=round(confidence * 100, 2),
         is_fake=is_fake,
+        is_partially_fake=is_partially_fake,
         veritas_score=veritas_score,
         fake_indicators=saliency['fake_indicators'],
         real_indicators=saliency['real_indicators'],
@@ -256,6 +322,8 @@ def explain_news(request: NewsArticleRequest):
         news_corroboration=reasoning.get("news_corroboration", []),
         news_corroboration_score=reasoning.get("news_corroboration_score", 0.0),
         has_wire_corroboration=reasoning.get("has_wire_corroboration", False),
+        has_claim_corroboration=reasoning.get("has_claim_corroboration", False),
+        topic_covered_claim_absent=reasoning.get("topic_covered_claim_absent", False),
         claims_breakdown=claims_breakdown,
         extracted_metadata={"processed_chars": len(fused_text)}
     )

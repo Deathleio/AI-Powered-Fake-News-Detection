@@ -7,6 +7,11 @@ from concurrent.futures import ThreadPoolExecutor
 
 from src.llm_reasoner.news_grounding_engine import fetch_live_news_corroboration
 
+REFUTATION_CUES = {
+    "denies", "denied", "no evidence", "unproven", "fictional", "debunked", 
+    "hoax", "conspiracy", "unsubstantiated", "unconfirmed", "disputed"
+}
+
 def fetch_encyclopedic_corroboration(query: str, max_results: int = 2) -> list:
     """
     Queries open Wikipedia API to fetch factual grounding snippets for entity/claim verification.
@@ -30,9 +35,12 @@ def fetch_encyclopedic_corroboration(query: str, max_results: int = 2) -> list:
             for r in results:
                 import re
                 clean_snippet = re.sub(r'<.*?>', '', r.get('snippet', ''))
+                snippet_lower = clean_snippet.lower()
+                has_refutation = any(cue in snippet_lower for cue in REFUTATION_CUES)
                 grounding.append({
                     "title": r.get('title'),
-                    "snippet": clean_snippet
+                    "snippet": clean_snippet,
+                    "has_refutation": has_refutation
                 })
             return grounding
     except Exception:
@@ -65,25 +73,41 @@ class LLMFactCheckReasoner:
         query_text = headline if headline else text_snippet[:100]
         
         knowledge_sources = []
-        news_info = {"total_matches": 0, "news_corroboration_score": 0.0, "has_wire_corroboration": False, "top_publishers": [], "articles": []}
+        news_info = {
+            "total_matches": 0, 
+            "news_corroboration_score": 0.0, 
+            "has_wire_corroboration": False, 
+            "has_claim_corroboration": False,
+            "topic_covered_claim_absent": False,
+            "top_publishers": [], 
+            "articles": []
+        }
         
         if query_text and len(query_text.strip()) >= 5:
             with ThreadPoolExecutor(max_workers=2) as executor:
                 future_wiki = executor.submit(fetch_encyclopedic_corroboration, query_text, 2)
-                future_news = executor.submit(fetch_live_news_corroboration, query_text, 4, 2.0)
+                future_news = executor.submit(fetch_live_news_corroboration, query_text, 4, 2.5)
                 
                 try:
-                    knowledge_sources = future_wiki.result(timeout=2.2) or []
+                    knowledge_sources = future_wiki.result(timeout=2.6) or []
                 except Exception:
                     knowledge_sources = []
                     
                 try:
-                    news_info = future_news.result(timeout=2.2) or news_info
+                    news_info = future_news.result(timeout=2.6) or news_info
                 except Exception:
                     pass
         
         reasons = []
+        topic_absent = news_info.get("topic_covered_claim_absent", False)
+        has_claim_corrob = news_info.get("has_claim_corroboration", False)
+
         if is_fake:
+            if topic_absent:
+                reasons.append("Topic entities (e.g. agency rovers or institutions) are actively reported in current news, but the specific breakthrough claim is absent from all wire reports, indicating an unverified or fabricated assertion.")
+            elif news_info.get("total_matches", 0) == 0:
+                reasons.append("Zero corroborating press wire reports found across major global news agencies, indicating an unverified claim or fabrication.")
+
             if stylistic_info and (stylistic_info.get("is_all_caps_title") or stylistic_info.get("is_all_caps_body")):
                 reasons.append("Extreme capitalization (all-caps shouting) identified, characteristic of sensationalist / clickbait claims.")
             if stylistic_info and stylistic_info.get("sensational_keywords"):
@@ -93,21 +117,22 @@ class LLMFactCheckReasoner:
                 if sensational_subset:
                     reasons.append(f"Sensational clickbait patterns detected: {', '.join(sensational_subset[:3])}.")
                 else:
-                    reasons.append("Elevated sensational markers and lack of corroborative journalistic framing detected.")
+                    reasons.append("Elevated disinformation markers detected in vocabulary and semantic patterns.")
             else:
-                reasons.append("Elevated sensational markers and lack of corroborative journalistic framing detected.")
-                
-            if news_info.get("total_matches", 0) == 0:
-                reasons.append("Zero corroborating press wire reports found across major global news agencies, indicating an unverified claim or fabrication.")
-                
+                reasons.append("Elevated risk markers and lack of corroborative journalistic framing detected.")
+
+            refuted_source = next((s for s in knowledge_sources if s.get("has_refutation")), None)
+            if refuted_source:
+                reasons.append(f"Encyclopedic context notes official agencies or records have disputed or denied unverified reports regarding '{refuted_source['title']}'.")
+
             if stylistic_info and stylistic_info.get("attribution_score", 0) == 0:
                 reasons.append("Zero verified journalistic attribution, institutional source citations, or official corroboration found.")
-            else:
-                reasons.append("Stylistic tone exhibits informal/alarmist framing characteristic of unverified news.")
+            elif not topic_absent:
+                reasons.append("Stylistic tone exhibits framing characteristic of unverified news.")
         else:
-            if news_info.get("total_matches", 0) > 0:
+            if has_claim_corrob:
                 top_pubs = ", ".join(news_info.get("top_publishers", [])[:2])
-                reasons.append(f"Corroborated by {news_info['total_matches']} live press wire reports from recognized outlets ({top_pubs}).")
+                reasons.append(f"Claim corroborated by live press wire reports from recognized outlets ({top_pubs}).")
                 
             if stylistic_info and stylistic_info.get("attribution_keywords"):
                 attrs = ", ".join(stylistic_info["attribution_keywords"][:3])
@@ -124,7 +149,10 @@ class LLMFactCheckReasoner:
             
             if knowledge_sources:
                 top_src = knowledge_sources[0]
-                reasons.append(f"Encyclopedic context aligned with verified topic: '{top_src['title']}'.")
+                if not top_src.get("has_refutation"):
+                    reasons.append(f"Encyclopedic context aligned with verified topic: '{top_src['title']}'.")
+                else:
+                    reasons.append(f"Encyclopedic reference records caution regarding '{top_src['title']}'.")
 
         summary = {
             "verdict": verdict,
@@ -136,6 +164,9 @@ class LLMFactCheckReasoner:
             "news_corroboration": news_info.get("articles", []),
             "news_corroboration_score": news_info.get("news_corroboration_score", 0.0),
             "has_wire_corroboration": news_info.get("has_wire_corroboration", False),
+            "has_claim_corroboration": has_claim_corrob,
+            "topic_covered_claim_absent": topic_absent,
             "rationale": " ".join(reasons)
         }
         return summary
+

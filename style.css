@@ -431,6 +431,11 @@ textarea {
     border-color: var(--fake-border);
 }
 
+.verdict-banner.mixed {
+    background-color: #fffbeb;
+    border-color: #fde68a;
+}
+
 .verdict-main-row {
     display: flex;
     align-items: center;
@@ -444,6 +449,7 @@ textarea {
 
 .verdict-banner.real .verdict-icon { color: var(--real-accent); }
 .verdict-banner.fake .verdict-icon { color: var(--fake-accent); }
+.verdict-banner.mixed .verdict-icon { color: #d97706; }
 
 .verdict-text-group {
     flex: 1;
@@ -465,6 +471,7 @@ textarea {
 
 .verdict-banner.real h3 { color: var(--real-text); }
 .verdict-banner.fake h3 { color: var(--fake-text); }
+.verdict-banner.mixed h3 { color: #92400e; }
 
 .score-display {
     text-align: right;
@@ -487,6 +494,7 @@ textarea {
 
 .verdict-banner.real .score-num { color: var(--real-accent); }
 .verdict-banner.fake .score-num { color: var(--fake-accent); }
+.verdict-banner.mixed .score-num { color: #d97706; }
 
 .score-denom {
     font-size: 0.75rem;

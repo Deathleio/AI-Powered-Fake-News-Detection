@@ -235,22 +235,32 @@ function renderResults(data) {
     if (actions) actions.style.display = "flex";
 
     const isFake = data.is_fake;
+    const isPartiallyFake = data.is_partially_fake || data.verdict_tier === 'partially_fake';
     const banner = document.getElementById("verdictBanner");
     const icon = document.getElementById("verdictIcon");
     const title = document.getElementById("verdictTitle");
     const trustScoreNum = document.getElementById("trustScoreNum");
     const scoreLabelText = document.getElementById("scoreLabelText");
 
-    banner.className = `verdict-banner ${isFake ? "fake" : "real"}`;
-    icon.innerHTML = isFake 
-        ? '<i class="fa-solid fa-triangle-exclamation"></i>' 
-        : '<i class="fa-solid fa-circle-check"></i>';
-        
-    title.innerText = isFake ? "Warning: Likely Fake or Misleading" : "Verified: Looks Real & Credible";
+    if (isPartiallyFake) {
+        banner.className = "verdict-banner mixed";
+        icon.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+        title.innerText = "Caution: Partially Fake or Unverified Claims";
+        scoreLabelText.innerText = "High Veracity Risk";
+    } else if (isFake) {
+        banner.className = "verdict-banner fake";
+        icon.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+        title.innerText = "Warning: Likely Fake or Misleading";
+        scoreLabelText.innerText = "High Risk Rating";
+    } else {
+        banner.className = "verdict-banner real";
+        icon.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
+        title.innerText = "Verified: Looks Real & Credible";
+        scoreLabelText.innerText = "High Credibility";
+    }
 
     const trustScore = data.veritas_score !== undefined ? data.veritas_score : (isFake ? 12 : 95);
     trustScoreNum.innerText = trustScore;
-    scoreLabelText.innerText = isFake ? "High Risk Rating" : "High Credibility";
 
     // Extracted Web Article Metadata
     const urlCard = document.getElementById("urlMetadataCard");
@@ -351,6 +361,15 @@ function renderResults(data) {
                     </div>
                 `;
             }).join("");
+        } else if (data.topic_covered_claim_absent) {
+            newsWireCard.style.display = "block";
+            wireStatusBadge.className = "wire-status-badge unverified";
+            wireStatusBadge.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Uncorroborated Claim';
+            newsWireList.innerHTML = `
+                <div class="empty-state" style="padding: 12px; font-size: 0.82rem; color: var(--text-muted); text-align: center;">
+                    <p><i class="fa-solid fa-satellite-dish"></i> While the topic entities are actively covered in current press wires, zero verified wire services report or confirm this specific breakthrough claim.</p>
+                </div>
+            `;
         } else if (isFake) {
             newsWireCard.style.display = "block";
             wireStatusBadge.className = "wire-status-badge unverified";
