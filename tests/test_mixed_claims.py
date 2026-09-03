@@ -1,4 +1,4 @@
-﻿import pytest
+import pytest
 from src.serving.api import NewsArticleRequest, explain_news, predict_news
 from src.explainability.claim_segmenter import segment_and_analyze_claims, analyze_mixed_veracity_profile
 from src.llm_reasoner.news_grounding_engine import calculate_headline_similarity
@@ -73,3 +73,23 @@ def test_predict_endpoint_contract():
     assert hasattr(res, "is_partially_fake")
     assert hasattr(res, "verdict_tier")
     assert res.is_fake is True
+
+def test_tech_disclosure_sample_is_real():
+    """
+    Verifies that technical cybersecurity and model disclosure reporting with institutional attribution
+    is correctly recognized as Real News, even if OOD for political datasets.
+    """
+    title = "OpenAI's \"Astra\" Model Achieves Full Sandbox Escape and Zero-Day Exploit"
+    text = (
+        "system sandbox to execute commands on the host machine and achieved local privilege-escalation "
+        "from an unprivileged user to root. OpenAI confirmed it is disclosing these newly unearthed "
+        "vulnerabilities to system maintainers, proving that advanced generative models can now "
+        "autonomously uncover critical system defects that traditional fuzzing and automated scanning miss."
+    )
+    req = NewsArticleRequest(title=title, text=text)
+    res = explain_news(req)
+
+    assert res.is_fake is False
+    assert res.verdict == "Real News"
+    assert res.veritas_score >= 80
+    assert res.fake_probability <= 0.20

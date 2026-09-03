@@ -66,7 +66,8 @@ def clean_query_keywords(query: str, max_tokens: int = 8) -> str:
 COMMON_ENTITIES = {
     "nasa", "mars", "rover", "moon", "space", "biden", "trump", "senate", "congress",
     "white", "house", "pentagon", "fed", "federal", "reserve", "bank", "police",
-    "government", "ukraine", "russia", "china", "who", "cdc", "fbi", "court"
+    "government", "ukraine", "russia", "china", "who", "cdc", "fbi", "court",
+    "openai", "google", "microsoft", "apple", "anthropic", "meta", "nvidia", "intel", "tesla"
 }
 
 class HeadlineMatchResult(float):
@@ -177,11 +178,15 @@ def fetch_live_news_corroboration(query: str, max_results: int = 4, timeout: flo
     any_claim_corroborated = False
 
     try:
-        # Query with fallback if 6-word query returns 0 results
+        # Build candidate queries: full clean query and structured entity fallbacks
+        tokens = search_q.split()
         candidate_queries = [search_q]
-        shorter_q = clean_query_keywords(query, max_tokens=4)
-        if shorter_q and shorter_q != search_q:
-            candidate_queries.append(shorter_q)
+        if len(tokens) > 3:
+            candidate_queries.append(" ".join(tokens[:4]))
+            if tokens[0].lower() in ["nasa", "us", "the", "new"] and len(tokens) > 4:
+                candidate_queries.append(" ".join(tokens[1:5]))
+            elif tokens[0].lower() in ["nasa", "us", "the", "new"]:
+                candidate_queries.append(" ".join(tokens[1:4]))
 
         items = []
         for q_try in candidate_queries:

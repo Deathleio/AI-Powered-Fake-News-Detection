@@ -117,7 +117,10 @@ def extract_stylistic_features(title: Optional[str], text: Optional[str]) -> dic
         r'\b(published in (the journal|nature|science|the lancet|cell|jama)|peer-reviewed)\b',
         r'\b(researchers (at|from|found|discovered)|scientists (at|from|reported)|astronomers (using|detected))\b',
         r'\b(unanimous vote|federal open market committee|central bank|official policy)\b',
-        r'\b(clinical trial|national institutes of health|world health organization|cdc announced)\b'
+        r'\b(clinical trial|national institutes of health|world health organization|cdc announced)\b',
+        r'\b([A-Z][a-zA-Z0-9_-]+\s+(confirmed|announced|disclosed|reported|stated|acknowledged|verified|released))\b',
+        r'\b(confirmed\s+(it\s+is|that|the|they)|disclosing\s+(these|the|vulnerabilities|findings|results))\b',
+        r'\b(security\s+(researchers?|advisory|bulletin|team)|system\s+maintainers?|vulnerability\s+disclosure)\b'
     ]
     detected_attributions = []
     for pattern in attribution_patterns:

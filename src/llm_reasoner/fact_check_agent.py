@@ -89,12 +89,12 @@ class LLMFactCheckReasoner:
                 future_news = executor.submit(fetch_live_news_corroboration, query_text, 4, 2.5)
                 
                 try:
-                    knowledge_sources = future_wiki.result(timeout=2.6) or []
+                    knowledge_sources = future_wiki.result(timeout=2.8) or []
                 except Exception:
                     knowledge_sources = []
                     
                 try:
-                    news_info = future_news.result(timeout=2.6) or news_info
+                    news_info = future_news.result(timeout=2.8) or news_info
                 except Exception:
                     pass
         
@@ -106,7 +106,10 @@ class LLMFactCheckReasoner:
             if topic_absent:
                 reasons.append("Topic entities (e.g. agency rovers or institutions) are actively reported in current news, but the specific breakthrough claim is absent from all wire reports, indicating an unverified or fabricated assertion.")
             elif news_info.get("total_matches", 0) == 0:
-                reasons.append("Zero corroborating press wire reports found across major global news agencies, indicating an unverified claim or fabrication.")
+                if stylistic_info and (stylistic_info.get("is_all_caps_title") or stylistic_info.get("sensational_keywords")):
+                    reasons.append("Zero corroborating press wire reports found across major global news agencies, indicating an unverified claim or fabrication.")
+                else:
+                    reasons.append("No corroborating press wire reports located in active news feeds.")
 
             if stylistic_info and (stylistic_info.get("is_all_caps_title") or stylistic_info.get("is_all_caps_body")):
                 reasons.append("Extreme capitalization (all-caps shouting) identified, characteristic of sensationalist / clickbait claims.")

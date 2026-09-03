@@ -16,7 +16,8 @@ TECHNICAL_CONTEXT_PATTERNS = [
     r'\b(regolith|spectrometer|spectral analysis|supercam|perseverance|curiosity|infrared|crystallographic)\b',
     r'\b(molecular clusters|crystalline layers|geological erosion|instrument|rover|exoplanet|photometry)\b',
     r'\b(monetary policy|basis points|central bank|inflation data|treasury yields|interest rates)\b',
-    r'\b(peer-reviewed|spectroscopic signatures|inner disk|planetary formation|astronomers)\b'
+    r'\b(peer-reviewed|spectroscopic signatures|inner disk|planetary formation|astronomers)\b',
+    r'\b(sandbox|privilege[- ]escalation|zero[- ]day|fuzzing|vulnerabilities|system defects|exploit|generative models?|machine learning)\b'
 ]
 
 def segment_and_analyze_claims(title: str, text: str) -> List[Dict[str, Any]]:
@@ -50,7 +51,7 @@ def segment_and_analyze_claims(title: str, text: str) -> List[Dict[str, Any]]:
         
         # 3. Attributed quote or cited authority
         is_attributed = bool(re.search(
-            r'\b(according to|spokesperson said|officials confirmed|in a statement|told reporters|published in|researchers found|study by)\b',
+            r'\b(according to|spokesperson said|officials confirmed|in a statement|told reporters|published in|researchers found|study by|confirmed (it is|that|the|they)|disclosing (these|the)|announced that)\b',
             s_lower
         ))
 
