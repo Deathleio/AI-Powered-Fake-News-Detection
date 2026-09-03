@@ -128,7 +128,13 @@ def extract_stylistic_features(title: Optional[str], text: Optional[str]) -> dic
         if matches:
             detected_attributions.extend(matches if isinstance(matches[0], str) else [m[0] for m in matches])
             
-    attribution_score = min(1.0, len(detected_attributions) * 0.35)
+    valid_attributions = []
+    for m in detected_attributions:
+        m_str = m if isinstance(m, str) else m[0]
+        if not re.search(r'\b(not\s+(verified|confirmed|disclosed|announced)|unverified|unconfirmed|has\s+not)\b', m_str, re.IGNORECASE):
+            valid_attributions.append(m_str)
+
+    attribution_score = min(1.0, len(valid_attributions) * 0.35)
 
     # 5. Composite Stylistic Fake Risk Score [0.0 to 1.0]
     risk = 0.0

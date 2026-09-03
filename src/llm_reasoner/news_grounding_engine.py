@@ -144,7 +144,9 @@ def calculate_headline_similarity(query: str, headline: str) -> HeadlineMatchRes
     if claim_tokens:
         if len(claim_tokens) <= 2 and len(claim_intersection) >= 1:
             claim_matched = True
-        elif len(claim_intersection) >= 3 or claim_coverage >= 0.40:
+        elif len(claim_intersection) >= 2 and len(intersection) >= 3:
+            claim_matched = True
+        elif len(claim_intersection) >= 3 or claim_coverage >= 0.35:
             claim_matched = True
 
     if claim_matched:
