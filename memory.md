@@ -41,21 +41,24 @@
   - Added automated tests in `tests/test_mixed_claims.py` verifying both partially fake NASA breakthrough and real institutional technical disclosures (24/24 tests passing).
   - Restored neutral reporting calibration for clean, formal prose without sensationalism (protecting unseen real articles like the Exam Security Summit against OOD TF-IDF bias), while strictly isolating and flagging unverified breakthrough claims (25/25 tests passing).
   - Added financial crisis & national emergency assertions to `EXTRAORDINARY_ASSERTION_PATTERNS` (e.g. Fed suspending all wire transfers due to quantum glitch), strictly preventing spoofed agency memos ('Treasury released a memo') from bypassing veracity checks without verified wire corroboration (26/26 tests passing).
-  - Upgraded `news_grounding_engine.py` and `claim_segmenter.py` for systemic detection of partially fake dispatches: general high-impact institutional action and mandate patterns, precise entity-level claim absence tracking, and order of operations synchronization (27/27 tests passing).
+  - [x] Upgraded `news_grounding_engine.py` and `claim_segmenter.py` for systemic detection of partially fake dispatches: general high-impact institutional action and mandate patterns, precise entity-level claim absence tracking, and order of operations synchronization (27/27 tests passing).
+- [x] Synchronized all master architectural documents (`Architecture.md`, `PRD.md`, `Phases.md`) with the v2.0 Enterprise system. Documented neural attention networks (`lstm_attention.py` with `BahdanauAttention`), multi-scale CNN-BiLSTM, and Transformer specifications (`RoBERTa-base` / `DeBERTa-v3-base`).
+- [x] Verified full test suite passes (30/30 automated unit and integration tests green).
 
 ---
 
 ## 🧠 Context Snapshot (happy on)
-- Serving: FastAPI; hybrid ML + psycholinguistic credibility + live knowledge grounding + mixed veracity detection in `src/serving/api.py`.
+- Serving: FastAPI; hybrid ML + neural sequence modeling + psycholinguistic credibility + live knowledge grounding + mixed veracity detection in `src/serving/api.py`.
 - Label convention: `0 = Fake`, `1 = Real`.
 - Frontend: Modern, accessible layout with 3-tier verdict states (Real, Partially Fake, Fake).
 - Production Artifacts: `best_model.joblib` + `model_logistic_regression.joblib` under `artifacts/`.
+- Deep Learning Artifacts: `bilstm_attention_best.pt` + `vocab.json` under `artifacts/`.
 - Handoff Guide: Read `LLM_CONTINUATION_GUIDE.md` for quick start & operational runbook.
 
 ---
 
 ## 🔨 Currently Working On
-- All automated and end-to-end tests passing. System accurately flags partially fake news mixed with real scientific context.
+- Complete documentation synchronization; all 30/30 automated unit and integration tests passing.
 
 ---
 

@@ -148,7 +148,7 @@ def compute_hybrid_fake_probability(
         elif has_claim and total_matches >= 3 and news_score >= 0.25 and risk <= 0.15:
             p_fake = min(p_fake * 0.40, 0.15)
         # Extraordinary claim where topic is reported on wires, but breakthrough claim is ABSENT from all wires
-        elif topic_absent:
+        elif topic_absent and not (attribution_score >= 0.35 and risk == 0.0):
             p_fake = max(p_fake, 0.76)
         # Extreme sensationalism or breaking claim with absolute ZERO press wire coverage
         elif total_matches == 0 and (sensational_score >= 0.30 or is_all_caps):
@@ -161,7 +161,7 @@ def compute_hybrid_fake_probability(
         p_fake = max(p_fake, 0.76)
 
     # 5. Extraordinary / Unverified Breaking Claim Guard
-    is_unverified_breakthrough = topic_absent or has_extraordinary
+    is_unverified_breakthrough = (topic_absent and not (attribution_score >= 0.35 and risk == 0.0)) or has_extraordinary
 
     if is_unverified_breakthrough:
         # Extraordinary claims require verified press wire corroboration
@@ -170,9 +170,12 @@ def compute_hybrid_fake_probability(
         if not (has_wire and has_claim):
             p_fake = max(p_fake, 0.76)
     else:
+        # High institutional attribution with zero sensational risk (e.g. corporate security / technical disclosure)
+        if attribution_score >= 0.35 and risk == 0.0 and not has_extraordinary and not sensational_words:
+            p_fake = min(p_fake, 0.15)
         # Subtle calibration for boundary neutral domain text (e.g. Exam Security Summit)
         # Gently shifts neutral 50/50 boundary text without overriding genuine fake news (which score >= 0.65)
-        if 0.45 <= p_fake <= 0.55 and risk == 0.0 and not sensational_words and not is_all_caps and exclamation_density == 0.0:
+        elif 0.45 <= p_fake <= 0.55 and risk == 0.0 and not sensational_words and not is_all_caps and exclamation_density == 0.0:
             p_fake = max(0.35, p_fake - 0.12)
 
     return float(np.clip(p_fake, 0.0001, 0.9999))
