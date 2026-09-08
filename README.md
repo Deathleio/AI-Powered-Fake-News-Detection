@@ -18,6 +18,8 @@ A high-precision, explainable Machine Learning and Natural Language Processing (
   - [Option C: Test API Endpoints via Terminal (`curl` / PowerShell)](#option-c-test-api-endpoints-via-terminal-curl--powershell)
 - [Running Automated Tests](#-running-automated-tests)
 - [Model Retraining (Optional)](#-model-retraining-optional)
+- [Cloud Deployment](#-cloud-deployment)
+- [Technical Documentation & Architecture](#-technical-documentation--architecture)
 - [Project Structure](#-project-structure)
 - [Troubleshooting & FAQs](#-troubleshooting--faqs)
 
@@ -241,6 +243,43 @@ python retrain_robust_model.py
 
 ---
 
+## ☁️ Cloud Deployment
+
+The application is pre-configured for instant zero-configuration deployment to free cloud tiers.
+
+### 1. Backend Deployment (Render / Railway)
+- **Render (`render.yaml` & `Dockerfile`)**:
+  - Connect your GitHub repository to [Render.com](https://render.com).
+  - Create a new **Web Service** with:
+    - **Build Command**: `pip install -r requirements.txt`
+    - **Start Command**: `uvicorn src.serving.api:app --host 0.0.0.0 --port $PORT`
+  - Render will assign a public URL (e.g. `https://fake-news-detector-api.onrender.com`).
+  - Verify endpoint health at `/health`.
+- **Railway (`Procfile`)**:
+  - Automatically builds from `requirements.txt` and runs the web process in `Procfile`.
+
+### 2. Frontend Deployment (Vercel / Netlify)
+- **Vercel (`vercel.json`)**:
+  - Connect the repository on [Vercel](https://vercel.com) and deploy root.
+  - The single-page dashboard and static assets will be served globally on high-speed edge CDN.
+- **Netlify (`netlify.toml` / `_redirects`)**:
+  - Deploy via [Netlify](https://netlify.com) git integration or drag-and-drop.
+  - CORS headers and client-side single-page rewrites are pre-configured.
+- **Connect Frontend to Backend**:
+  - Open the hosted frontend URL, paste your Render backend URL into the header, and click the checkmark button to save.
+
+---
+
+## 📚 Technical Documentation & Architecture
+
+Comprehensive architectural blueprints and system specifications are maintained in the `docs/` directory:
+
+- 🏛️ **[System Architecture & Data Flows (docs/ARCHITECTURE.md)](docs/ARCHITECTURE.md)**: Exhaustive documentation of the 4-tier scraper, NLP feature extractors, PyTorch BiLSTM attention sequence models, CNN-BiLSTM, live news wire corroboration, and hybrid arbitration formulas.
+- 📋 **[Product Requirements & Specifications (docs/PRD.md)](docs/PRD.md)**: Product goals, SLA targets, 3-tier classification spectrum, persona profiles, and verification criteria.
+- 🔬 **[Dataset Studies (dataset_study/)](dataset_study/)**: In-depth analysis of the WELFake, LIAR, and CoAID balanced multi-domain dataset, data schema, EDA profile, tokenization specs, and active learning pipelines.
+
+---
+
 ## 📂 Project Structure
 
 ```
@@ -248,6 +287,10 @@ AI Powered Fake News Detection/
 ├── artifacts/                  # Serialized ML models and evaluation metrics
 │   ├── best_model.joblib       # Active production classifier
 │   └── benchmark_metrics.json  # Model accuracy and benchmark scores
+├── dataset_study/              # Multi-domain dataset studies & active learning logs
+├── docs/                       # Comprehensive technical documentation
+│   ├── ARCHITECTURE.md         # System architecture & model blueprints
+│   └── PRD.md                  # Product requirements & veracity engine specs
 ├── frontend/                   # Web frontend assets (HTML, CSS, JS)
 │   ├── index.html              # Main application UI
 │   ├── style.css               # Styling and responsive design
@@ -263,10 +306,15 @@ AI Powered Fake News Detection/
 │       ├── api.py              # REST API definitions and endpoints
 │       └── app.py              # Local dashboard runner and static file mount
 ├── tests/                      # Automated unit and integration tests
-├── requirements.txt            # Python dependencies
+├── Dockerfile                  # Container build specification
+├── Procfile                    # Web service process configuration
+├── netlify.toml                # Netlify deployment configuration
+├── render.yaml                 # Render cloud deployment blueprint
+├── requirements.txt            # Production Python dependencies
 ├── run_pipeline.py             # CLI master entry point (train / serve / test)
 ├── test_sample.py              # Terminal CLI testing script
-└── README.md                   # Project documentation
+├── vercel.json                 # Vercel edge configuration
+└── README.md                   # Primary project documentation
 ```
 
 ---
@@ -297,10 +345,3 @@ Then visit `http://127.0.0.1:8080`.
 ## 📄 License & Credits
 
 Developed with modern Python NLP tooling (FastAPI, Scikit-Learn, PyTorch, BeautifulSoup4). Designed for research, enterprise veracity verification, and journalistic fact-checking.
-
-//backend server
-python run_pipeline.py --mode serve --host 127.0.0.1 --port 8000
-
-//Frontend
-cd frontend
- python -m http.server 3000

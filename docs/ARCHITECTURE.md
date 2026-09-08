@@ -88,13 +88,10 @@
 
 ```
 c:/AI Powered Fake News Detection/
-├── PRD.md                         # Product requirements document (v2.0 Enterprise)
-├── Architecture.md                # System architecture, pipeline flows, model blueprints
-├── rules.md                       # AI coding rules, boundaries, and label conventions
-├── Phases.md                      # Milestone delivery roadmap and status tracker
-├── Design.md                      # Visual design system, color tokens, and typography
-├── memory.md                      # Continuous progress tracker across LLM sessions
-├── LLM_CONTINUATION_GUIDE.md      # Context hand-off and operational runbook
+├── docs/                          # Architecture blueprints & product requirements
+│   ├── ARCHITECTURE.md            # System architecture, pipeline flows, model blueprints
+│   └── PRD.md                     # Product requirements document (v2.0 Enterprise)
+├── README.md                      # Comprehensive developer and user guide
 │
 ├── frontend/                      # Static web client (Netlify / Vercel ready)
 │   ├── index.html                 # Modern responsive dashboard, presets, and modals
