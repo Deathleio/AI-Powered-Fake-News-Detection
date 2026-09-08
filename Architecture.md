@@ -18,7 +18,7 @@
 │                                                                             │
 │  2. NLP Preprocessing & Feature Engineering:                                │
 │     - Dateline / wire agency watermark sanitizer (strips shortcut leakage)  │
-│     - Title-body weighted fusion (`fuse_title_body`)                         │
+│     - Title-body weighted fusion (`fuse_title_body`)(Concatenation)                         │
 │     - Stylistic & psycholinguistic feature extractor (ALL CAPS, triggers)   │
 │                                                                             │
 │  3. Claim Decomposition & Forensic Analysis:                                │
