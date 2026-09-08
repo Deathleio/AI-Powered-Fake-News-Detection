@@ -193,7 +193,7 @@ The project architecture accommodates three distinct modeling paradigms:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                          VeritasAI Modeling Stack                           │
+│                          FACTCHECK Modeling Stack                           │
 ├────────────────────────────────┬────────────────────────────────────────────┤
 │ Route A: Production Serving    │ • Dual TF-IDF (Word 1-2g + Char 3-4g)      │
 │ (Active in artifacts/)         │ • Calibrated Passive-Aggressive / LogReg   │
