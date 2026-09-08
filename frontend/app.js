@@ -1,6 +1,6 @@
 // Backend API URL: Auto-detect local development vs cloud production
 const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.port === '8000' || window.location.protocol === 'file:';
-const BACKEND_API_URL = (isLocal && window.location.protocol !== 'file:') ? window.location.origin : (window.location.protocol === 'file:' ? 'http://127.0.0.1:8000' : 'https://ai-powered-fake-news-detection-bcbb.onrender.com');
+const BACKEND_API_URL = (window.location.port === '8000') ? window.location.origin : (isLocal ? 'http://127.0.0.1:8000' : 'https://ai-powered-fake-news-detection-bcbb.onrender.com');
 
 let currentActiveTab = 'text';
 let lastAnalyzedResult = null;

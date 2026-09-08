@@ -189,6 +189,7 @@ async function analyzeNews() {
 </html>
 """
 
+from fastapi import HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, HTMLResponse
 from src.serving.api import app, NewsArticleRequest, explain_news
@@ -204,9 +205,22 @@ def serve_dashboard():
     if os.path.exists(index_path):
         with open(index_path, "r", encoding="utf-8") as f:
             content = f.read()
-            # rewrite relative paths to static if needed
             return HTMLResponse(content=content)
     return HTMLResponse(content=HTML_CONTENT)
+
+@app.get("/style.css")
+def serve_style():
+    path = os.path.join(frontend_dir, "style.css")
+    if os.path.exists(path):
+        return FileResponse(path, media_type="text/css")
+    raise HTTPException(status_code=404, detail="style.css not found")
+
+@app.get("/app.js")
+def serve_script():
+    path = os.path.join(frontend_dir, "app.js")
+    if os.path.exists(path):
+        return FileResponse(path, media_type="application/javascript")
+    raise HTTPException(status_code=404, detail="app.js not found")
 
 def launch_server(host="127.0.0.1", port=8000):
     print(f"Starting Fake News Detection Dashboard on http://{host}:{port}")
