@@ -8,7 +8,7 @@
 
 ## 1. Overview & Vision
 
-**VeritasAI** is an enterprise-grade AI news verification and veracity intelligence platform. It analyzes news headlines, article text, or live web URLs to determine veracity across a 3-tier spectrum:
+**FACTCHECK** is an enterprise-grade AI news verification and veracity intelligence platform. It analyzes news headlines, article text, or live web URLs to determine veracity across a 3-tier spectrum:
 - **Real News:** Factually grounded reporting aligned with authoritative sources.
 - **Partially Fake / Misleading:** Hybrid disinformation mixing legitimate context with unverified or extraordinary claims.
 - **Fake News:** Fabricated assertions, malicious disinformation, or sensational clickbait.
