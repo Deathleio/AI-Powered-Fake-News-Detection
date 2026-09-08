@@ -432,7 +432,7 @@ function exportForensicReport() {
     const jsonStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(lastAnalyzedResult, null, 2));
     const dlAnchor = document.createElement('a');
     dlAnchor.setAttribute("href", jsonStr);
-    dlAnchor.setAttribute("download", `Veritas_Verification_Report_${Date.now()}.json`);
+    dlAnchor.setAttribute("download", `FACTCHECK_Verification_Report_${Date.now()}.json`);
     document.body.appendChild(dlAnchor);
     dlAnchor.click();
     dlAnchor.remove();
