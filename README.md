@@ -276,6 +276,7 @@ Comprehensive architectural blueprints and system specifications are maintained 
 
 - 🏛️ **[System Architecture & Data Flows (docs/ARCHITECTURE.md)](docs/ARCHITECTURE.md)**: Exhaustive documentation of the 4-tier scraper, NLP feature extractors, PyTorch BiLSTM attention sequence models, CNN-BiLSTM, live news wire corroboration, and hybrid arbitration formulas.
 - 📋 **[Product Requirements & Specifications (docs/PRD.md)](docs/PRD.md)**: Product goals, SLA targets, 3-tier classification spectrum, persona profiles, and verification criteria.
+- 📜 **[Development & Model Timeline (development timeline.md)](development%20timeline.md)**: Chronological model evolution, benchmark accuracies, training methodologies, failure modes, and why the hybrid veracity engine was adopted.
 - 🔬 **[Dataset Studies (dataset_study/)](dataset_study/)**: In-depth analysis of the WELFake, LIAR, and CoAID balanced multi-domain dataset, data schema, EDA profile, tokenization specs, and active learning pipelines.
 
 ---
@@ -314,6 +315,7 @@ AI Powered Fake News Detection/
 ├── run_pipeline.py             # CLI master entry point (train / serve / test)
 ├── test_sample.py              # Terminal CLI testing script
 ├── vercel.json                 # Vercel edge configuration
+├── development timeline.md     # Chronological model evolution & accuracy report
 └── README.md                   # Primary project documentation
 ```
 
