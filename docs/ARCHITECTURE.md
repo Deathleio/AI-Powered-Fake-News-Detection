@@ -64,7 +64,7 @@
 3. **Data Preprocessing:**
    - `sanitize_wire_leakage()` strips wire agency datelines (e.g., `WASHINGTON (Reuters) -`, `LONDON (AP) --`) and brand watermarks to prevent spurious shortcut learning.
    - `fuse_title_body()` concatenates title and body text with weighted title repetition.
-4. **Forensic Feature Extraction:**
+4. **Feature Extraction:**
    - `extract_stylistic_features()` calculates casing ratios, exclamation mark density, sensational clickbait keywords (*"miracle cure"*, *"bombshell"*, *"secret plot"*), and legitimate institutional attribution markers (*"according to"*, *"officials confirmed"*).
    - `segment_and_analyze_claims()` parses the article into atomic sentences, categorizing them (*High-Risk Sensational Claim*, *Unverified Breakthrough Assertion*, *Verified Sourced Statement*, *Empirical Data Point*).
    - `analyze_mixed_veracity_profile()` checks for hybrid disinformation (scientific or technical context blended with unverified claims).
