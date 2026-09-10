@@ -9,7 +9,7 @@
 
 ```
 ┌───────────────────────────────────────────────────────────────────────────────────────────┐
-│                               VERITASAI EVOLUTION ROADMAP                                 │
+│                               FACTCHECK EVOLUTION ROADMAP                                 │
 ├───────────────────┬───────────────────┬───────────────────┬───────────────────────────────┤
 │   Generation 1    │   Generation 2    │   Generation 3    │     Generation 4 (Today)      │
 │  "The Keyword     │  "The Complex     │  "The Dual Style  │   "The Multi-Tier Truth       │
