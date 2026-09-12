@@ -1,189 +1,191 @@
 {
-  "calibrated_passive_aggressive": {
-    "model_name": "Calibrated Passive-Aggressive (Word+Char TF-IDF)",
-    "accuracy": 0.9872470196839479,
-    "precision": 0.9868696479543292,
-    "recall": 0.9868696479543292,
-    "macro_f1": 0.9872364768697266,
-    "binary_f1": 0.9868696479543292,
-    "roc_auc": 0.9985896429080596,
+  "primary_production_model": "bilstm_attention_deep_learning",
+  "deep_learning_bilstm_attention": {
+    "model_name": "Deep Learning BiLSTM with Bahdanau Attention",
+    "accuracy": 0.8999648999648999,
+    "precision": 0.9094191007548408,
+    "recall": 0.9040783034257749,
+    "macro_f1": 0.8994340070389322,
+    "binary_f1": 0.9067408376963351,
+    "roc_auc": 0.9687009341220016,
     "confusion_matrix": [
       [
-        5497,
-        69
+        4714,
+        552
       ],
       [
-        69,
-        5186
+        588,
+        5542
       ]
     ],
     "classification_report": {
       "Real (0)": {
-        "precision": 0.987603305785124,
-        "recall": 0.987603305785124,
-        "f1-score": 0.987603305785124,
-        "support": 5566.0
+        "precision": 0.8890984534138061,
+        "recall": 0.8951766046334979,
+        "f1-score": 0.8921271763815292,
+        "support": 5266.0
       },
       "Fake (1)": {
-        "precision": 0.9868696479543292,
-        "recall": 0.9868696479543292,
-        "f1-score": 0.9868696479543292,
-        "support": 5255.0
+        "precision": 0.9094191007548408,
+        "recall": 0.9040783034257749,
+        "f1-score": 0.9067408376963351,
+        "support": 6130.0
       },
-      "accuracy": 0.9872470196839479,
+      "accuracy": 0.8999648999648999,
       "macro avg": {
-        "precision": 0.9872364768697266,
-        "recall": 0.9872364768697266,
-        "f1-score": 0.9872364768697266,
-        "support": 10821.0
+        "precision": 0.8992587770843234,
+        "recall": 0.8996274540296364,
+        "f1-score": 0.8994340070389322,
+        "support": 11396.0
       },
       "weighted avg": {
-        "precision": 0.9872470196839479,
-        "recall": 0.9872470196839479,
-        "f1-score": 0.9872470196839479,
-        "support": 10821.0
+        "precision": 0.9000290929540432,
+        "recall": 0.8999648999648999,
+        "f1-score": 0.8999879822660289,
+        "support": 11396.0
+      }
+    }
+  },
+  "stacking_deep_ensemble": {
+    "model_name": "Stacking Deep Ensemble (BiLSTM-Att + PA + LR)",
+    "accuracy": 0.9356791856791857,
+    "precision": 0.9385665529010239,
+    "recall": 0.9420880913539967,
+    "macro_f1": 0.9352871433778858,
+    "binary_f1": 0.9403240250753073,
+    "roc_auc": 0.9871678575787671,
+    "confusion_matrix": [
+      [
+        4888,
+        378
+      ],
+      [
+        355,
+        5775
+      ]
+    ],
+    "classification_report": {
+      "Real (0)": {
+        "precision": 0.9322906732786572,
+        "recall": 0.928218761868591,
+        "f1-score": 0.9302502616804643,
+        "support": 5266.0
+      },
+      "Fake (1)": {
+        "precision": 0.9385665529010239,
+        "recall": 0.9420880913539967,
+        "f1-score": 0.9403240250753073,
+        "support": 6130.0
+      },
+      "accuracy": 0.9356791856791857,
+      "macro avg": {
+        "precision": 0.9354286130898406,
+        "recall": 0.9351534266112939,
+        "f1-score": 0.9352871433778858,
+        "support": 11396.0
+      },
+      "weighted avg": {
+        "precision": 0.9356665193724716,
+        "recall": 0.9356791856791857,
+        "f1-score": 0.935669019982534,
+        "support": 11396.0
+      }
+    }
+  },
+  "calibrated_passive_aggressive": {
+    "model_name": "Calibrated Passive-Aggressive (Baseline)",
+    "accuracy": 0.9247981747981748,
+    "precision": 0.926825319734499,
+    "recall": 0.933931484502447,
+    "macro_f1": 0.9243145099777861,
+    "binary_f1": 0.9303648330218575,
+    "roc_auc": 0.981683879285936,
+    "confusion_matrix": [
+      [
+        4814,
+        452
+      ],
+      [
+        405,
+        5725
+      ]
+    ],
+    "classification_report": {
+      "Real (0)": {
+        "precision": 0.9223989269975091,
+        "recall": 0.9141663501709077,
+        "f1-score": 0.9182641869337148,
+        "support": 5266.0
+      },
+      "Fake (1)": {
+        "precision": 0.926825319734499,
+        "recall": 0.933931484502447,
+        "f1-score": 0.9303648330218575,
+        "support": 6130.0
+      },
+      "accuracy": 0.9247981747981748,
+      "macro avg": {
+        "precision": 0.9246121233660041,
+        "recall": 0.9240489173366774,
+        "f1-score": 0.9243145099777861,
+        "support": 11396.0
+      },
+      "weighted avg": {
+        "precision": 0.9247799192296737,
+        "recall": 0.9247981747981748,
+        "f1-score": 0.9247732217284071,
+        "support": 11396.0
       }
     }
   },
   "logistic_regression": {
-    "model_name": "Logistic Regression (Word+Char TF-IDF)",
-    "accuracy": 0.9829960262452638,
-    "precision": 0.9835971771886325,
-    "recall": 0.9813510941960039,
-    "macro_f1": 0.9829808624539567,
-    "binary_f1": 0.9824728519718041,
-    "roc_auc": 0.9981482652765038,
+    "model_name": "Logistic Regression (Baseline)",
+    "accuracy": 0.9311161811161811,
+    "precision": 0.9364690511187327,
+    "recall": 0.935399673735726,
+    "macro_f1": 0.9307244058431015,
+    "binary_f1": 0.935934056965641,
+    "roc_auc": 0.9858655885365133,
     "confusion_matrix": [
       [
-        5480,
-        86
+        4877,
+        389
       ],
       [
-        98,
-        5157
+        396,
+        5734
       ]
     ],
     "classification_report": {
       "Real (0)": {
-        "precision": 0.9824309788454644,
-        "recall": 0.9845490477901545,
-        "f1-score": 0.9834888729361091,
-        "support": 5566.0
+        "precision": 0.9249004361843353,
+        "recall": 0.9261298898594759,
+        "f1-score": 0.9255147547205618,
+        "support": 5266.0
       },
       "Fake (1)": {
-        "precision": 0.9835971771886325,
-        "recall": 0.9813510941960039,
-        "f1-score": 0.9824728519718041,
-        "support": 5255.0
+        "precision": 0.9364690511187327,
+        "recall": 0.935399673735726,
+        "f1-score": 0.935934056965641,
+        "support": 6130.0
       },
-      "accuracy": 0.9829960262452638,
+      "accuracy": 0.9311161811161811,
       "macro avg": {
-        "precision": 0.9830140780170484,
-        "recall": 0.9829500709930792,
-        "f1-score": 0.9829808624539567,
-        "support": 10821.0
+        "precision": 0.930684743651534,
+        "recall": 0.9307647817976009,
+        "f1-score": 0.9307244058431015,
+        "support": 11396.0
       },
       "weighted avg": {
-        "precision": 0.982997319506526,
-        "recall": 0.9829960262452638,
-        "f1-score": 0.9829954628845959,
-        "support": 10821.0
+        "precision": 0.9311232871450107,
+        "recall": 0.9311161811161811,
+        "f1-score": 0.9311193811475831,
+        "support": 11396.0
       }
     }
   },
-  "sgd_log_loss": {
-    "model_name": "SGD Log-Loss (Word+Char TF-IDF)",
-    "accuracy": 0.9826263746419001,
-    "precision": 0.9837693335879321,
-    "recall": 0.9803996194100857,
-    "macro_f1": 0.9826102997115889,
-    "binary_f1": 0.9820815859702631,
-    "roc_auc": 0.9980660411708576,
-    "confusion_matrix": [
-      [
-        5481,
-        85
-      ],
-      [
-        103,
-        5152
-      ]
-    ],
-    "classification_report": {
-      "Real (0)": {
-        "precision": 0.981554441260745,
-        "recall": 0.9847287100251527,
-        "f1-score": 0.9831390134529148,
-        "support": 5566.0
-      },
-      "Fake (1)": {
-        "precision": 0.9837693335879321,
-        "recall": 0.9803996194100857,
-        "f1-score": 0.9820815859702631,
-        "support": 5255.0
-      },
-      "accuracy": 0.9826263746419001,
-      "macro avg": {
-        "precision": 0.9826618874243385,
-        "recall": 0.9825641647176192,
-        "f1-score": 0.9826102997115889,
-        "support": 10821.0
-      },
-      "weighted avg": {
-        "precision": 0.9826300589651501,
-        "recall": 0.9826263746419001,
-        "f1-score": 0.9826254951624299,
-        "support": 10821.0
-      }
-    }
-  },
-  "stacking_meta_ensemble": {
-    "model_name": "Stacking Meta-Ensemble (PA + LR + SGD)",
-    "accuracy": 0.9856760003696516,
-    "precision": 0.9864555513162915,
-    "recall": 0.9840152235965747,
-    "macro_f1": 0.9856631472351711,
-    "binary_f1": 0.9852338763456225,
-    "roc_auc": 0.9984804780143681,
-    "confusion_matrix": [
-      [
-        5495,
-        71
-      ],
-      [
-        84,
-        5171
-      ]
-    ],
-    "classification_report": {
-      "Real (0)": {
-        "precision": 0.9849435382685069,
-        "recall": 0.9872439813151276,
-        "f1-score": 0.9860924181247196,
-        "support": 5566.0
-      },
-      "Fake (1)": {
-        "precision": 0.9864555513162915,
-        "recall": 0.9840152235965747,
-        "f1-score": 0.9852338763456225,
-        "support": 5255.0
-      },
-      "accuracy": 0.9856760003696516,
-      "macro avg": {
-        "precision": 0.9856995447923992,
-        "recall": 0.9856296024558511,
-        "f1-score": 0.9856631472351711,
-        "support": 10821.0
-      },
-      "weighted avg": {
-        "precision": 0.9856778168533057,
-        "recall": 0.9856760003696516,
-        "f1-score": 0.9856754846574657,
-        "support": 10821.0
-      }
-    }
-  },
-  "best_model_name": "Calibrated Passive-Aggressive",
-  "peak_accuracy": 0.9872470196839479,
-  "peak_macro_f1": 0.9872364768697266
+  "peak_accuracy": 0.9356791856791857,
+  "peak_macro_f1": 0.9352871433778858,
+  "model_architecture": "Bidirectional LSTM + Bahdanau Additive Attention with Neural Head",
+  "framework": "PyTorch 2.x"
 }

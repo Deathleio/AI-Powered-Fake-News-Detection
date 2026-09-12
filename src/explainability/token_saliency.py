@@ -2,6 +2,31 @@ import re
 import numpy as np
 from typing import List, Dict, Any, Tuple, Optional
 
+def extract_token_saliency(
+    text: str,
+    pipeline,
+    top_k: int = 10,
+    sensational_tokens: Optional[List[str]] = None
+) -> Dict[str, Any]:
+    """
+    Unified Explainable AI (XAI) extractor supporting both Deep Learning Bahdanau
+    Attention attribution and TF-IDF linear coefficients.
+    """
+    if hasattr(pipeline, 'explain_text'):
+        # Native Deep Learning Attention Attribution
+        res = pipeline.explain_text(text, top_k=top_k, sensational_tokens=sensational_tokens)
+        return {
+            "real_indicators": res.get("real_indicators", []),
+            "fake_indicators": res.get("fake_indicators", [])
+        }
+
+    return extract_tfidf_word_importance(
+        text=text,
+        pipeline=pipeline,
+        top_k=top_k,
+        sensational_tokens=sensational_tokens
+    )
+
 def extract_tfidf_word_importance(
     text: str,
     pipeline,
@@ -14,6 +39,13 @@ def extract_tfidf_word_importance(
       1 = REAL NEWS (positive weight contribution)
       0 = FAKE NEWS (negative weight contribution)
     """
+    if hasattr(pipeline, 'explain_text'):
+        res = pipeline.explain_text(text, top_k=top_k, sensational_tokens=sensational_tokens)
+        return {
+            "real_indicators": res.get("real_indicators", []),
+            "fake_indicators": res.get("fake_indicators", [])
+        }
+
     if hasattr(pipeline, 'vectorizer') and hasattr(pipeline, 'clf'):
         vectorizer = pipeline.vectorizer
         clf = pipeline.clf

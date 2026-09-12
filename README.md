@@ -1,48 +1,141 @@
-# 🛡️ AI-Powered Fake News Detection System (VeritasAI)
+# 🧠 VeritasAI: Deep Learning Fake News & Veracity Intelligence Platform
 
-A high-precision, explainable Machine Learning and Natural Language Processing (NLP) system for detecting fake news, sensationalism, and disinformation. The platform features statistical NLP pipelines (TF-IDF + Linear Classifiers), deep learning sequence models, token-level explainability, domain credibility scoring, and live news wire corroboration.
+An enterprise-grade, explainable **Deep Learning (DL)** and **Natural Language Processing (NLP)** platform for detecting fake news, media disinformation, unverified breaking claims, and clickbait sensationalism.
+
+Built on **PyTorch**, the primary classification core features a **Bidirectional LSTM (BiLSTM) with Bahdanau Additive Attention (`BiLSTMAttentionClassifier`)**, providing high-accuracy sequence modeling paired with token-level neural attention explainability, real-time press wire corroboration, and domain credibility scoring.
 
 ---
 
 ## 📋 Table of Contents
 
-- [Features](#-features)
+- [Deep Learning Architecture Overview](#-deep-learning-architecture-overview)
+- [Key Features](#-key-features)
+- [Model Benchmark & Performance](#-model-benchmark--performance)
+- [Explainable AI: Bahdanau Attention Mechanism](#-explainable-ai-bahdanau-attention-mechanism)
 - [System Requirements](#-system-requirements)
 - [Quick Start Guide](#-quick-start-guide)
-  - [1. Open Terminal & Navigate to Project](#1-open-terminal--navigate-to-project)
-  - [2. Create and Activate Virtual Environment](#2-create-and-activate-virtual-environment)
+  - [1. Clone & Setup](#1-open-terminal--navigate-to-project)
+  - [2. Virtual Environment](#2-create-and-activate-virtual-environment)
   - [3. Install Dependencies](#3-install-dependencies)
-- [How to Run the Program Locally on Terminal](#-how-to-run-the-program-locally-on-terminal)
-  - [Option A: Instant Terminal CLI Analysis (No Browser Needed)](#option-a-instant-terminal-cli-analysis-no-browser-needed)
-  - [Option B: Run the Local Web Server & API](#option-b-run-the-local-web-server--api)
-  - [Option C: Test API Endpoints via Terminal (`curl` / PowerShell)](#option-c-test-api-endpoints-via-terminal-curl--powershell)
+- [How to Run the Program Locally](#-how-to-run-the-program-locally)
+  - [Option A: Instant Terminal CLI Analysis](#option-a-instant-terminal-cli-analysis)
+  - [Option B: Run the Web Server & Full Dashboard](#option-b-run-the-web-server--full-dashboard)
+  - [Option C: REST API Endpoints & Grounding Queries](#option-c-rest-api-endpoints--grounding-queries)
+- [API Reference & Grounding Endpoints](#-api-reference--grounding-endpoints)
 - [Running Automated Tests](#-running-automated-tests)
-- [Model Retraining (Optional)](#-model-retraining-optional)
-- [Cloud Deployment](#-cloud-deployment)
+- [Model Training & Retraining](#-model-training--retraining)
 - [Technical Documentation & Architecture](#-technical-documentation--architecture)
 - [Project Structure](#-project-structure)
-- [Troubleshooting & FAQs](#-troubleshooting--faqs)
 
 ---
 
-## ✨ Features
+## 🧠 Deep Learning Architecture Overview
 
-- **High-Accuracy Classification**: Pre-trained ML pipeline combining TF-IDF feature extraction with calibrated linear classifiers and deep learning models.
-- **Explainable AI (XAI)**: Highlights red-flag clickbait tokens and credibility-boosting keywords with exact attribution weights.
-- **Live News Wire Corroboration**: Cross-references claims against verified global news wire feeds and encyclopedic sources.
-- **Multi-Modal Verification**: Analyzes headline sensationalism, stylistic risk, all-caps density, attribution markers, and domain reputation.
-- **Multiple Interfaces**:
-  - Direct Terminal CLI interface for rapid testing.
-  - FastAPI backend with OpenAPI / Swagger documentation.
-  - Integrated local HTML5 web dashboard.
+Unlike shallow bag-of-words or simple count-based keyword heuristics, VeritasAI processes articles as **temporal semantic sequences** through a deep neural pipeline:
+
+```
+                          ┌────────────────────────────────────────┐
+                          │   News Input (Headline + Body Text)    │
+                          └──────────────────┬─────────────────────┘
+                                             │
+                                  [Text Preprocessor]
+                                             │
+                          ┌──────────────────▼─────────────────────┐
+                          │       Word Vocabulary Encoder          │
+                          │        (35,000 Learned Tokens)         │
+                          └──────────────────┬─────────────────────┘
+                                             │
+                          ┌──────────────────▼─────────────────────┐
+                          │      Token Embedding Layer             │
+                          │   (128-dimensional dense vectors)      │
+                          └──────────────────┬─────────────────────┘
+                                             │
+                          ┌──────────────────▼─────────────────────┐
+                          │    Bidirectional LSTM Core             │
+                          │ (Forward & Backward Temporal Context)  │
+                          └──────────────────┬─────────────────────┘
+                                             │
+                          ┌──────────────────▼─────────────────────┐
+                          │    Bahdanau Additive Attention         │
+                          │   α_t = Softmax(v^T * tanh(W * h_t))   │
+                          └──────────────────┬─────────────────────┘
+                                             │
+                          ┌──────────────────▼─────────────────────┐
+                          │    Deep Dense Classification Head      │
+                          │  LayerNorm ➔ ReLU ➔ Dropout ➔ Linear   │
+                          └──────────────────┬─────────────────────┘
+                                             │
+               ┌─────────────────────────────┴─────────────────────────────┐
+               ▼                                                           ▼
+┌─────────────────────────────┐                             ┌─────────────────────────────┐
+│    Binary Veracity Score    │                             │  Attention-Saliency Map     │
+│ P(Real News) vs P(Fake News)│                             │ Token-Level Attribution XAI │
+└─────────────────────────────┘                             └─────────────────────────────┘
+```
+
+### 1. Primary Model: `BiLSTMAttentionClassifier`
+- **Embedding Layer**: 128-dimensional learned dense embeddings with spatial 2D dropout.
+- **Recurrent Core**: Bidirectional LSTM capturing forward narrative trajectory ($\vec{h}_t$) and reverse syntactic structure ($\overleftarrow{h}_t$).
+- **Bahdanau Additive Attention**: Computes normalized attention weights $\alpha_t$ across all word tokens, pooling temporal hidden states into an information-dense context vector:
+  $$\alpha_t = \frac{\exp(v^\top \tanh(W h_t))}{\sum_{k=1}^T \exp(v^\top \tanh(W h_k))}, \quad c = \sum_{t=1}^T \alpha_t h_t$$
+- **Classification Head**: Multi-layer neural projection with Layer Normalization, ReLU activation, and Dropout regularization.
+
+### 2. Multi-Scale CNN-BiLSTM Hybrid (`CNNBiLSTMClassifier`)
+- Multi-scale parallel 1D convolutions (kernel sizes 3, 4, 5) capturing local n-gram clickbait phrases concatenated into a BiLSTM for global narrative coherence.
+
+### 3. Stacking Deep Ensemble (`StackingEnsembleModel`)
+- Fuses out-of-fold probability distributions from the primary Deep Learning sequence model with calibrated linear and stylistic learners, achieving peak classification accuracy and variance reduction.
+
+---
+
+## ✨ Key Features
+
+- **Deep Learning Sequence Intelligence**: Understands context, syntax, and narrative flow rather than relying merely on word counts.
+- **Intrinsic Token-Level Explainability (XAI)**: Directly outputs learned Bahdanau Attention scores for every word, visually highlighting deceptive clickbait triggers vs. credibility-anchoring tokens.
+- **Dedicated Live Press Wire Grounding (`/api/v1/ground-claim`)**: Cross-references claims against live Google News Wire RSS feeds, major international agencies (Reuters, AP, Bloomberg, BBC), and Wikipedia factual knowledge.
+- **Mixed Veracity & Breakthrough Detection**: Flags uncorroborated "breakthrough" assertions (e.g. secret cures, alien discoveries) that lack wire corroboration despite real-world background topics.
+- **Domain Reputation Registry**: Evaluates 100+ global journalistic domains, satire publications (e.g. *The Onion*), and state-sponsored disinformation outlets.
+- **Enterprise REST API**: Built on FastAPI with complete OpenAPI / Swagger documentation, JSON schema validation, and health monitoring.
+
+---
+
+## 📊 Model Benchmark & Performance
+
+Evaluated on **11,396 unseen holdout articles** from the balanced multi-domain dataset (`artifacts/benchmark_metrics.json`):
+
+| Model Architecture | Framework | Accuracy | Macro F1 | ROC-AUC | Primary Role |
+| :--- | :---: | :---: | :---: | :---: | :--- |
+| **BiLSTM with Bahdanau Attention** | **PyTorch 2.x** | **90.00%** | **0.8994** | **0.9687** | **Active Production Core** |
+| **Stacking Deep Ensemble (BiLSTM + Baselines)** | **PyTorch / Scikit** | **93.57%** | **0.9353** | **0.9872** | **Peak Ensemble Pipeline** |
+| Calibrated Passive-Aggressive | Scikit-Learn | 92.48% | 0.9246 | 0.9780 | Fast Lightweight Fallback |
+| Regularized Logistic Regression | Scikit-Learn | 91.90% | 0.9188 | 0.9734 | Comparative Baseline |
+
+*Ground Truth Convention: `0 = Fake News / Clickbait`, `1 = Real / Factual News`.*
+
+---
+
+## 🔍 Explainable AI: Bahdanau Attention Mechanism
+
+Unlike black-box deep learning classifiers, VeritasAI provides **white-box neural interpretability**:
+
+```python
+# The model produces logits AND attention weights:
+logits, att_weights = model(input_tensor, return_attention=True)
+# att_weights represents the exact softmax probability mass the neural network
+# allocated to each individual word in the sentence.
+```
+
+- **Fake News Detection**: Top attended words highlight alarmist rhetoric, conspiracy formulation, or urgent medical claims (`"secret ancient root"`, `"big pharma panic"`, `"globalist plot"`).
+- **Real News Detection**: Top attended words highlight authoritative attributions, institutional sources, and dates (`"announced"`, `"unanimous vote"`, `"central bank"`, `"published in the journal"`).
 
 ---
 
 ## 💻 System Requirements
 
 - **Python**: 3.9, 3.10, 3.11, 3.12, or 3.13
+- **Deep Learning Framework**: PyTorch `>= 2.0.0`
 - **Operating System**: Windows 10/11, macOS, or Linux
-- **Terminal Shell**: PowerShell, Command Prompt (cmd), or Bash / Zsh
+- **Hardware**: Runs efficiently on standard CPUs (<15ms per inference); optionally supports CUDA GPUs.
 
 ---
 
@@ -50,24 +143,19 @@ A high-precision, explainable Machine Learning and Natural Language Processing (
 
 ### 1. Open Terminal & Navigate to Project
 
-Open your favorite terminal (PowerShell, Command Prompt, or Terminal) and change to the project directory:
-
 ```bash
 cd "c:/AI Powered Fake News Detection"
 ```
 
 ### 2. Create and Activate Virtual Environment
 
-It is recommended to use an isolated Python virtual environment.
-
 #### On Windows (PowerShell):
 ```powershell
 python -m venv venv
 .\venv\Scripts\Activate.ps1
 ```
-> *Note for PowerShell users*: If you see an execution policy error, run `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` and then run the activation script again.
 
-#### On Windows (Command Prompt - `cmd`):
+#### On Windows (CMD):
 ```cmd
 python -m venv venv
 venv\Scripts\activate.bat
@@ -81,8 +169,6 @@ source venv/bin/activate
 
 ### 3. Install Dependencies
 
-Ensure `pip` is up to date, then install all project requirements:
-
 ```bash
 pip install --upgrade pip
 pip install -r requirements.txt
@@ -90,194 +176,162 @@ pip install -r requirements.txt
 
 ---
 
-## 🖥️ How to Run the Program Locally on Terminal
+## 🖥️ How to Run the Program Locally
 
-You can run the program in **three different ways** depending on your needs.
+### Option A: Instant Terminal CLI Analysis
 
----
+Analyze news articles or run the benchmark demo directly in your terminal:
 
-### Option A: Instant Terminal CLI Analysis (No Browser Needed)
-
-Evaluate articles directly inside your terminal using `test_sample.py`.
-
-#### 1. Run the Built-in Demo Suite (4 Realistic News Cases)
+#### 1. Run the Built-in Demo Benchmark (4 Real-World News Cases)
 ```bash
 python test_sample.py --demo
 ```
-This tests real mainstream news, viral sensational clickbait, science dispatches, and medical disinformation, printing confidence scores, red-flag keywords, and AI rationales directly to your terminal.
+*Outputs confidence scores, Bahdanau Attention keywords, and multi-engine fact-checking rationales for verified news, sensational clickbait, space exploration, and medical scams.*
 
-#### 2. Analyze Any Custom News Headline and Text
+#### 2. Analyze Custom Headline & Text
 ```bash
-python test_sample.py --title "BREAKING: Scientists discover water on Mars" --text "NASA researchers confirmed today that satellite spectroscopy revealed subsurface ice formations in Martian craters."
+python test_sample.py --title "NASA James Webb Space Telescope Detects Water Vapor in Rocky Planet Formation Zone" --text "Astronomers identified clear spectroscopic signatures of water within the inner disk of a young star system."
 ```
-
-#### CLI Options:
-| Flag | Description |
-| :--- | :--- |
-| `--demo` | Runs the full benchmark test suite across preset samples |
-| `--title "..."` | News headline or title string |
-| `--text "..."` | Body content or article paragraphs |
 
 ---
 
-### Option B: Run the Local Frontend & Web Dashboard
+### Option B: Run the Web Server & Full Dashboard
 
-The frontend can be run in two ways:
-
-#### Way 1: All-in-One Integrated Server (Recommended)
-This runs the FastAPI backend and automatically serves the full frontend web dashboard on a single port:
+Launch the unified FastAPI backend and local web dashboard on a single port:
 
 ```bash
 python run_pipeline.py --mode serve --host 127.0.0.1 --port 8000
 ```
-*(Or alternatively: `python -m src.serving.app`)*
+*(Or directly: `python -m src.serving.app`)*
 
-Once running:
-- Open your browser to **[http://127.0.0.1:8000](http://127.0.0.1:8000)** to use the frontend!
-- API Swagger documentation is available at **[http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)**.
-
-#### Way 2: Standalone Frontend Server (Optional)
-If you prefer to serve the static frontend files separately (for example, using Python's built-in HTTP server, VS Code Live Server, or Node `serve`):
-
-1. **Terminal 1** (Start backend):
-   ```bash
-   python run_pipeline.py --mode serve --port 8000
-   ```
-
-2. **Terminal 2** (Start standalone frontend server):
-   ```bash
-   cd frontend
-   python -m http.server 3000
-   ```
-   Then open **[http://localhost:3000](http://localhost:3000)**. The frontend will automatically detect and communicate with your backend running on port 8000.
-
-#### Way 3: Open `index.html` Directly in Browser
-You can even open [frontend/index.html](file:///c:/AI%20Powered%20Fake%20News%20Detection/frontend/index.html) directly by double-clicking it or opening it with Chrome / Edge / Firefox while the backend is running on port 8000.
+- 🌐 **Interactive Web Dashboard**: **[http://127.0.0.1:8000](http://127.0.0.1:8000)**
+- 📖 **Interactive OpenAPI / Swagger Docs**: **[http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)**
 
 ---
 
-### Option C: Test API Endpoints via Terminal (`curl` / PowerShell)
+### Option C: REST API Endpoints & Grounding Queries
 
-With the server running (from Option B), open a second terminal window to query the endpoints:
+Query the active Deep Learning server via `curl` or PowerShell:
 
-#### 1. Health Check
+#### 1. Inspect Deep Learning Model Info (`/api/v1/model-info`)
 ```bash
-curl http://127.0.0.1:8000/health
+curl http://127.0.0.1:8000/api/v1/model-info
 ```
 **Response:**
 ```json
-{"status":"healthy","service":"VeritasAI Enterprise Veracity Platform","version":"2.0.0"}
+{
+  "engine_name": "VeritasAI Deep Learning Veracity Platform",
+  "primary_model_type": "Deep Learning (PyTorch)",
+  "architecture": "Bidirectional LSTM with Bahdanau Additive Attention",
+  "framework": "PyTorch 2.x",
+  "explainability_engine": "Bahdanau Attention Token Saliency",
+  "parameters": {
+    "vocab_size": 35000,
+    "sequence_length": 256,
+    "device": "cpu",
+    "attention_mechanism": "Additive Bahdanau [v^T * tanh(W * h)]"
+  },
+  "benchmark_summary": {
+    "dl_test_accuracy": 0.9000,
+    "dl_macro_f1": 0.8994,
+    "dl_roc_auc": 0.9687
+  }
+}
 ```
 
-#### 2. Quick Prediction Endpoint (`/predict`)
+#### 2. Verify and Ground a Specific Claim (`/api/v1/ground-claim`)
+```bash
+curl -X POST "http://127.0.0.1:8000/api/v1/ground-claim" \
+  -H "Content-Type: application/json" \
+  -d "{\"claim\": \"Federal Reserve holds benchmark interest rates steady\"}"
+```
+**Response:**
+```json
+{
+  "claim": "Federal Reserve holds benchmark interest rates steady",
+  "cleaned_search_query": "Federal Reserve holds benchmark interest rates steady",
+  "corroboration_score": 0.954,
+  "has_wire_corroboration": true,
+  "has_claim_corroboration": true,
+  "grounding_verdict": "Corroborated by Verified Press Wires",
+  "confidence_percentage": 98.5
+}
+```
+
+#### 3. Deep Learning Prediction (`/predict`)
 ```bash
 curl -X POST "http://127.0.0.1:8000/predict" \
   -H "Content-Type: application/json" \
   -d "{\"title\": \"Secret cure suppressed by doctors\", \"text\": \"Miracle remedy heals all conditions in 24 hours!\"}"
 ```
 
-#### 3. Full Explainability & Saliency Endpoint (`/explain`)
+#### 4. Attention Saliency & Full XAI (`/explain`)
 ```bash
 curl -X POST "http://127.0.0.1:8000/explain" \
   -H "Content-Type: application/json" \
-  -d "{\"title\": \"Federal Reserve holds interest rates steady\", \"text\": \"Central bank officials voted unanimously to maintain rates after positive economic data.\"}"
+  -d "{\"title\": \"James Webb Telescope detects water vapor\", \"text\": \"Spectroscopic analysis confirms water vapor in planet forming disk.\"}"
 ```
 
-#### 4. Direct Web URL Extraction & Analysis (`/api/v1/analyze-url`)
-```bash
-curl -X POST "http://127.0.0.1:8000/api/v1/analyze-url" \
-  -H "Content-Type: application/json" \
-  -d "{\"url\": \"https://en.wikipedia.org/wiki/Artificial_intelligence\"}"
-```
+---
 
-*(Windows PowerShell alternative for curl)*:
-```powershell
-Invoke-RestMethod -Uri "http://127.0.0.1:8000/health" -Method Get
-```
+## 📡 API Reference & Grounding Endpoints
+
+| Endpoint | Method | Purpose | Deep Learning / Engine Feature |
+| :--- | :---: | :--- | :--- |
+| `/health` | `GET` | System health check | Verifies API runtime and service status |
+| `/api/v1/model-info` | `GET` | Model transparency | Reports active DL architecture, PyTorch version, parameters & attention heads |
+| `/api/v1/ground-claim` | `POST` | Claim grounding | Cross-checks assertions against live Google News Wire RSS & Wikipedia |
+| `/predict` | `POST` | Quick classification | BiLSTM sequence prediction with calibrated hybrid probability |
+| `/explain` | `POST` | Full XAI diagnostic | Attention saliency weights, claim breakdown, live news corroboration & trust score |
+| `/api/v1/analyze-url` | `POST` | Scrape & evaluate URL | Extracts headline, body, and domain reputation for instant verification |
+| `/api/v1/feedback` | `POST` | Active learning | Logs analyst corrections for active learning retraining |
+| `/api/v1/export-report`| `POST` | Forensic report | Generates cryptographically hashed audit certificates |
 
 ---
 
 ## 🧪 Running Automated Tests
 
-Run the full automated test suite to ensure preprocessors, models, pipelines, and endpoints are operating properly:
+Run the automated test suite covering unit operations, PyTorch models, forward passes, attention extraction, and API endpoints:
 
 ```bash
-python run_pipeline.py --mode test
-```
-
-Or using `pytest`:
-```bash
-pytest tests/ -v
+python -m unittest discover tests
 ```
 
 Expected output:
 ```
-test_empty_request_validation ... ok
-test_health_check ... ok
-test_cnn_bilstm_forward ... ok
-test_evaluator_metrics ... ok
-test_vocabulary_and_lstm ... ok
-test_extract_stylistic_features ... ok
-test_fuse_title_body ... ok
-test_sanitize_wire_leakage ... ok
-test_text_preprocessor_dataframe ... ok
-
-----------------------------------------------------------------------
-Ran 9 tests in 0.4s
+[VeritasAI] Primary Deep Learning BiLSTM-Attention pipeline successfully loaded into memory.
+Ran 12 tests in 1.6s
 OK
 ```
 
 ---
 
-## 🔄 Model Retraining (Optional)
+## 🔄 Model Training & Retraining
 
-Trained models (`best_model.joblib`) are already included in the `artifacts/` folder. If you wish to retrain or experiment with new datasets:
+To train the complete Deep Learning pipeline on the full dataset:
 
 ```bash
-# Run the complete model training pipeline
-python run_pipeline.py --mode train
-
-# Or run robust model retraining directly
-python retrain_robust_model.py
+python train.py
 ```
 
----
-
-## ☁️ Cloud Deployment
-
-The application is pre-configured for instant zero-configuration deployment to free cloud tiers.
-
-### 1. Backend Deployment (Render / Railway)
-- **Render (`render.yaml` & `Dockerfile`)**:
-  - Connect your GitHub repository to [Render.com](https://render.com).
-  - Create a new **Web Service** with:
-    - **Build Command**: `pip install -r requirements.txt`
-    - **Start Command**: `uvicorn src.serving.api:app --host 0.0.0.0 --port $PORT`
-  - Render will assign a public URL (e.g. `https://fake-news-detector-api.onrender.com`).
-  - Verify endpoint health at `/health`.
-- **Railway (`Procfile`)**:
-  - Automatically builds from `requirements.txt` and runs the web process in `Procfile`.
-
-### 2. Frontend Deployment (Vercel / Netlify)
-- **Vercel (`vercel.json`)**:
-  - Connect the repository on [Vercel](https://vercel.com) and deploy root.
-  - The single-page dashboard and static assets will be served globally on high-speed edge CDN.
-- **Netlify (`netlify.toml` / `_redirects`)**:
-  - Deploy via [Netlify](https://netlify.com) git integration or drag-and-drop.
-  - CORS headers and client-side single-page rewrites are pre-configured.
-- **Connect Frontend to Backend**:
-  - Open the hosted frontend URL, paste your Render backend URL into the header, and click the checkmark button to save.
+This will:
+1. Load and stratify the 75,970-article dataset.
+2. Compile a 35,000-word neural vocabulary into `artifacts/vocab.json`.
+3. Train `BiLSTMAttentionClassifier` on CPU/GPU with AdamW, CosineAnnealingLR, and gradient clipping.
+4. Save best checkpoint to `artifacts/bilstm_attention_best.pt`.
+5. Train comparative baselines and Stacking Meta-Ensemble.
+6. Evaluate holdout test metrics and record to `artifacts/benchmark_metrics.json`.
 
 ---
 
 ## 📚 Technical Documentation & Architecture
 
-Comprehensive architectural blueprints and system specifications are maintained in the `docs/` directory:
+Comprehensive documentation is provided in the `docs/` folder:
 
-- 🏛️ **[System Architecture & Data Flows (docs/ARCHITECTURE.md)](docs/ARCHITECTURE.md)**: Exhaustive documentation of the 4-tier scraper, NLP feature extractors, PyTorch BiLSTM attention sequence models, CNN-BiLSTM, live news wire corroboration, and hybrid arbitration formulas.
-- 📋 **[Product Requirements & Specifications (docs/PRD.md)](docs/PRD.md)**: Product goals, SLA targets, 3-tier classification spectrum, persona profiles, and verification criteria.
-- 📜 **[Development & Model Timeline (development timeline.md)](development%20timeline.md)**: Chronological model evolution, benchmark accuracies, training methodologies, failure modes, and why the hybrid veracity engine was adopted.
-- 🔬 **[Dataset Studies (dataset_study/)](dataset_study/)**: In-depth analysis of the WELFake, LIAR, and CoAID balanced multi-domain dataset, data schema, EDA profile, tokenization specs, and active learning pipelines.
+- 🏛️ **[System Architecture (docs/ARCHITECTURE.md)](docs/ARCHITECTURE.md)**: Deep dive into the BiLSTM recurrent core, Bahdanau Attention equations, multi-scale CNN-BiLSTM, live news grounding engine, and domain credibility registry.
+- 📋 **[Product Requirements Document (docs/PRD.md)](docs/PRD.md)**: Product specifications, SLAs, 3-tier classification spectrum, and verification criteria.
+- 📜 **[Development & Model Evolution (development timeline.md)](development%20timeline.md)**: Chronological model journey from early linear models to Generation 4 ("The Explainable Neural Attention Architecture").
+- 🔬 **[Dataset Studies (dataset_study/)](dataset_study/)**: Statistical profiling of WELFake, LIAR, and CoAID datasets.
 
 ---
 
@@ -285,65 +339,33 @@ Comprehensive architectural blueprints and system specifications are maintained 
 
 ```
 AI Powered Fake News Detection/
-├── artifacts/                  # Serialized ML models and evaluation metrics
-│   ├── best_model.joblib       # Active production classifier
-│   └── benchmark_metrics.json  # Model accuracy and benchmark scores
-├── dataset_study/              # Multi-domain dataset studies & active learning logs
-├── docs/                       # Comprehensive technical documentation
-│   ├── ARCHITECTURE.md         # System architecture & model blueprints
-│   └── PRD.md                  # Product requirements & veracity engine specs
-├── frontend/                   # Web frontend assets (HTML, CSS, JS)
-│   ├── index.html              # Main application UI
-│   ├── style.css               # Styling and responsive design
-│   └── app.js                  # Frontend client logic & charts
-├── src/                        # Core application source code
-│   ├── config.py               # Paths, hyperparameters, and environment settings
-│   ├── credibility/            # Domain reputation and publisher trust registry
-│   ├── data/                   # Data cleaning, text fusing, and URL scrapers
-│   ├── explainability/         # TF-IDF token saliency & claim segmentation
-│   ├── llm_reasoner/           # Fact-checking agent & news wire corroboration
-│   ├── models/                 # Model architectures (Sklearn, BiLSTM, Ensembles)
-│   └── serving/                # FastAPI backend & web server launcher
-│       ├── api.py              # REST API definitions and endpoints
-│       └── app.py              # Local dashboard runner and static file mount
-├── tests/                      # Automated unit and integration tests
-├── Dockerfile                  # Container build specification
-├── Procfile                    # Web service process configuration
-├── netlify.toml                # Netlify deployment configuration
-├── render.yaml                 # Render cloud deployment blueprint
-├── requirements.txt            # Production Python dependencies
-├── run_pipeline.py             # CLI master entry point (train / serve / test)
-├── test_sample.py              # Terminal CLI testing script
-├── vercel.json                 # Vercel edge configuration
-├── development timeline.md     # Chronological model evolution & accuracy report
-└── README.md                   # Primary project documentation
+├── artifacts/
+│   ├── bilstm_attention_best.pt  # Primary trained PyTorch Deep Learning model
+│   ├── vocab.json                # Learned 35,000-token sequence vocabulary
+│   ├── benchmark_metrics.json    # Holdout test accuracy and benchmark report
+│   ├── best_model.joblib         # Secondary/fallback baseline model
+│   └── stacking_ensemble.joblib  # Meta-ensemble stacking model
+├── dataset_study/                # Balanced multi-domain dataset studies
+├── docs/                         # Architecture blueprints and PRD
+├── frontend/                     # Modern responsive HTML5/CSS/JS frontend
+├── src/
+│   ├── config.py                 # Hyperparameters, sequence lengths & paths
+│   ├── credibility/              # Domain reputation registry
+│   ├── data/                     # Text preprocessing, wire sanitization, URL scraper
+│   ├── evaluation/               # Metrics evaluator (Accuracy, F1, ROC-AUC)
+│   ├── explainability/           # Bahdanau Attention saliency & claim segmentation
+│   ├── llm_reasoner/             # Live press wire corroboration & Wikipedia grounding
+│   ├── models/                   # Deep Learning models (BiLSTM-Att, CNN-BiLSTM)
+│   └── serving/                  # FastAPI REST API & dashboard launcher
+├── tests/                        # Automated unit and integration tests
+├── requirements.txt              # Production dependencies (including PyTorch)
+├── train.py                      # Production Deep Learning training pipeline
+├── test_sample.py                # Terminal CLI evaluation script
+└── README.md                     # Primary documentation
 ```
 
 ---
 
-## ❓ Troubleshooting & FAQs
+## 📄 License & Academic Citation
 
-#### Q: `Activate.ps1 cannot be loaded because running scripts is disabled on this system` (PowerShell)
-**Fix:** Run the following command in PowerShell before activating:
-```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-```
-
-#### Q: `Address already in use` error when running the server
-**Fix:** Another process is already using port `8000`. You can specify a different port:
-```bash
-python run_pipeline.py --mode serve --port 8080
-```
-Then visit `http://127.0.0.1:8080`.
-
-#### Q: `ModuleNotFoundError: No module named 'src'`
-**Fix:** Ensure you are running commands from the **root directory** (`c:\AI Powered Fake News Detection`). If running modular scripts directly, set the `PYTHONPATH`:
-- **PowerShell**: `$env:PYTHONPATH="."`
-- **CMD**: `set PYTHONPATH=.`
-- **Linux/macOS**: `export PYTHONPATH=.`
-
----
-
-## 📄 License & Credits
-
-Developed with modern Python NLP tooling (FastAPI, Scikit-Learn, PyTorch, BeautifulSoup4). Designed for research, enterprise veracity verification, and journalistic fact-checking.
+Designed for academic research, journalistic fact-checking, and enterprise disinformation mitigation. Built with **PyTorch**, **FastAPI**, and modern NLP sequence modeling.

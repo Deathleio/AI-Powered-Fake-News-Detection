@@ -65,9 +65,10 @@ Black-box detectors fail because users and journalists need clear, forensic expl
 - **4-Tier URL Scraper (`src/data/url_extractor.py`):** Scrapes arbitrary web links using JSON-LD schema parsing, OpenGraph/Twitter card tags, semantic HTML5 `<article>` extraction, and meta descriptions. Removes tracking parameters (`utm_*`, `fbclid`).
 
 ### 2. Modeling Stack
-- **Production Serving (`FakeNewsPipeline`):** Dual TF-IDF vectorizer (Word 1-2g + Char 3-4g) with Calibrated Passive-Aggressive and Regularized Logistic Regression ($C=0.8$). Achieves **98.72% test accuracy** with <5ms inference.
-- **Neural Attention Network (`BiLSTMAttentionClassifier`):** 2-layer Bidirectional LSTM with learned Bahdanau Additive Attention to weight temporal hidden states into an informative context vector.
+- **Production Deep Learning Core (`DeepLearningNewsPipeline`):** PyTorch Bidirectional LSTM with Bahdanau Additive Attention (`BiLSTMAttentionClassifier`) and 35,000-token learned sequence vocabulary. Achieves high-precision temporal sequence modeling with native token attention explainability.
+- **Stacking Deep Ensemble (`StackingEnsembleModel`):** Fuses out-of-fold probability distributions from the primary BiLSTM Attention network with calibrated feature learners, achieving **93.57% test accuracy** and **0.9872 ROC-AUC**.
 - **Multi-Scale CNN-BiLSTM (`CNNBiLSTMClassifier`):** Parallel 1D convolutions (kernel sizes 3, 4, 5) extracting n-gram features into recurrent sequence layers.
+- **Dedicated Grounding & Transparency APIs:** `/api/v1/ground-claim` for real-time press wire corroboration and `/api/v1/model-info` for deep learning architecture transparency.
 - **Transformer Fine-Tuning Blueprint:** Pre-trained `RoBERTa-base` and `DeBERTa-v3-base` specifications with dual-segment tokenization (`truncation="only_second"`, `max_length=512`) for high-compute GPU nodes.
 
 ### 3. Claim Segmentation & Mixed-Veracity Engine (`src/explainability/claim_segmenter.py`)

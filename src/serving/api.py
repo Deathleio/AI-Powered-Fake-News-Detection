@@ -3,6 +3,7 @@ import json
 import time
 import hashlib
 from typing import List, Optional, Dict, Any
+from concurrent.futures import ThreadPoolExecutor
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -11,16 +12,18 @@ import numpy as np
 from src.config import config
 from src.data.preprocessor import fuse_title_body, extract_stylistic_features
 from src.models.baselines import FakeNewsPipeline
-from src.explainability.token_saliency import extract_tfidf_word_importance, generate_highlighted_html
-from src.llm_reasoner.fact_check_agent import LLMFactCheckReasoner
+from src.models.lstm_attention import DeepLearningNewsPipeline, BiLSTMAttentionClassifier, TextVocabulary
+from src.explainability.token_saliency import extract_token_saliency, extract_tfidf_word_importance, generate_highlighted_html
+from src.llm_reasoner.fact_check_agent import LLMFactCheckReasoner, fetch_encyclopedic_corroboration
+from src.llm_reasoner.news_grounding_engine import fetch_live_news_corroboration, clean_query_keywords
 from src.credibility.domain_registry import evaluate_publisher_credibility
 from src.data.url_extractor import extract_article_from_url
 from src.explainability.claim_segmenter import segment_and_analyze_claims, analyze_mixed_veracity_profile
 
 app = FastAPI(
-    title="VeritasAI Enterprise Veracity Intelligence API",
-    version="2.0.0",
-    description="Commercial-grade AI Fake News Detection, Claim Verification & Domain Credibility Platform."
+    title="VeritasAI Deep Learning Veracity Intelligence Platform",
+    version="2.1.0",
+    description="Commercial-grade Deep Learning Fake News Detection, Attention Sequence Modeling & Real-Time Press Wire Grounding Platform."
 )
 
 # Enable CORS for frontend and clients
@@ -84,6 +87,16 @@ fact_checker = LLMFactCheckReasoner()
 def get_model():
     global model_pipeline
     if model_pipeline is None:
+        dl_model_path = os.path.join(config.ARTIFACTS_DIR, "bilstm_attention_best.pt")
+        vocab_path = os.path.join(config.ARTIFACTS_DIR, "vocab.json")
+        if os.path.exists(dl_model_path) and os.path.exists(vocab_path):
+            try:
+                model_pipeline = DeepLearningNewsPipeline.load(dl_model_path, vocab_path)
+                print("[VeritasAI] Primary Deep Learning BiLSTM-Attention pipeline successfully loaded into memory.", flush=True)
+                return model_pipeline
+            except Exception as e:
+                print(f"[Warning] Failed to load Deep Learning model ({e}). Falling back to classical baseline.", flush=True)
+
         model_path = os.path.join(config.ARTIFACTS_DIR, "best_model.joblib")
         if not os.path.exists(model_path):
             model_path = os.path.join(config.ARTIFACTS_DIR, "model_logistic_regression.joblib")
@@ -254,7 +267,7 @@ def explain_news(request: NewsArticleRequest):
     prelim_fake = compute_hybrid_fake_probability(raw_proba_fake, stylistic_info, domain_info, mixed_info=mixed_info)
 
     sensational_words = stylistic_info.get("sensational_keywords", [])
-    saliency = extract_tfidf_word_importance(fused_text, model, top_k=8, sensational_tokens=sensational_words)
+    saliency = extract_token_saliency(fused_text, model, top_k=8, sensational_tokens=sensational_words)
     fake_tokens = [w['token'] for w in saliency['fake_indicators']]
     real_tokens = [w['token'] for w in saliency['real_indicators']]
 
@@ -403,7 +416,7 @@ def export_forensic_report(request: NewsArticleRequest):
     return {
         "report_id": f"VERITAS-AUDIT-{report_id.upper()}",
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        "engine_version": "VeritasAI v2.0 Enterprise",
+        "engine_version": "VeritasAI v2.1 Deep Learning",
         "title": request.title,
         "verdict": res.verdict,
         "veritas_trust_score": res.veritas_score,
@@ -412,4 +425,123 @@ def export_forensic_report(request: NewsArticleRequest):
         "claim_breakdown": res.claims_breakdown,
         "ai_rationale": res.llm_reasoning,
         "audit_signature": hashlib.sha256(f"{report_id}{res.verdict}{res.veritas_score}".encode('utf-8')).hexdigest()
+    }
+
+class GroundClaimRequest(BaseModel):
+    claim: str
+    context: Optional[str] = ""
+    max_wire_results: Optional[int] = 5
+
+class GroundClaimResponse(BaseModel):
+    claim: str
+    cleaned_search_query: str
+    corroboration_score: float
+    has_wire_corroboration: bool
+    has_claim_corroboration: bool
+    topic_covered_claim_absent: bool
+    grounding_verdict: str
+    confidence_percentage: float
+    wire_articles: List[dict]
+    encyclopedic_evidence: List[dict]
+    analysis_summary: str
+
+@app.post("/api/v1/ground-claim", response_model=GroundClaimResponse)
+def ground_claim_endpoint(req: GroundClaimRequest):
+    """
+    Dedicated high-precision grounding endpoint.
+    Cross-references specific assertions and claims against live Google News Wire RSS feeds,
+    institutional wire authorities (Reuters, AP, Bloomberg, BBC), and encyclopedic sources.
+    """
+    claim_text = req.claim.strip()
+    if not claim_text:
+        raise HTTPException(status_code=400, detail="Claim text cannot be empty.")
+
+    cleaned_q = clean_query_keywords(claim_text, max_tokens=7)
+    
+    # Run wire and encyclopedia grounding concurrently
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        f_news = executor.submit(fetch_live_news_corroboration, claim_text, req.max_wire_results, 3.5)
+        f_wiki = executor.submit(fetch_encyclopedic_corroboration, claim_text, 2)
+        news_res = f_news.result()
+        wiki_res = f_wiki.result()
+
+    score = float(news_res.get("news_corroboration_score", 0.0))
+    has_wire = bool(news_res.get("has_wire_corroboration", False))
+    has_claim = bool(news_res.get("has_claim_corroboration", False))
+    topic_absent = bool(news_res.get("topic_covered_claim_absent", False))
+    wire_articles = news_res.get("articles", [])
+    
+    # Determine grounding status
+    if has_wire and has_claim and score >= 0.35:
+        verdict = "Corroborated by Verified Press Wires"
+        conf = min(98.5, 60.0 + score * 80.0)
+        summary = f"Claim assertion is verified by accredited press wire services ({', '.join(news_res.get('top_publishers', [])[:3])})."
+    elif has_claim and len(wire_articles) >= 2:
+        verdict = "Substantiated by Multiple External Reporting Sources"
+        conf = 75.0 + score * 40.0
+        summary = "Multiple independent news sources corroborate the reporting, though outside top wire services."
+    elif topic_absent:
+        verdict = "Topic Covered but Core Claim Absent (High Risk of Fabrication)"
+        conf = 88.0
+        summary = "Press wires extensively report on this topic/entity, but the dramatic claim itself is completely absent from all wire reports."
+    elif len(wire_articles) == 0:
+        verdict = "Uncorroborated / Zero External Coverage"
+        conf = 85.0
+        summary = "Zero independent news coverage or press wire reporting exists for this claim assertion."
+    else:
+        verdict = "Weak / Contextual Match Only"
+        conf = 65.0
+        summary = "Articles share surface vocabulary but do not confirm the assertion."
+
+    return GroundClaimResponse(
+        claim=claim_text,
+        cleaned_search_query=cleaned_q,
+        corroboration_score=round(score, 4),
+        has_wire_corroboration=has_wire,
+        has_claim_corroboration=has_claim,
+        topic_covered_claim_absent=topic_absent,
+        grounding_verdict=verdict,
+        confidence_percentage=round(conf, 1),
+        wire_articles=wire_articles,
+        encyclopedic_evidence=wiki_res,
+        analysis_summary=summary
+    )
+
+@app.get("/api/v1/model-info")
+def get_model_info():
+    """
+    Returns transparency metadata for the active production model.
+    Highlights the Deep Learning architecture, parameter dimensions, attention mechanisms, and benchmarks.
+    """
+    model = get_model()
+    is_dl = isinstance(model, DeepLearningNewsPipeline)
+    
+    metrics = {}
+    benchmark_path = os.path.join(config.ARTIFACTS_DIR, "benchmark_metrics.json")
+    if os.path.exists(benchmark_path):
+        try:
+            with open(benchmark_path, "r", encoding="utf-8") as f:
+                metrics = json.load(f)
+        except Exception:
+            pass
+
+    return {
+        "engine_name": "VeritasAI Deep Learning Veracity Platform",
+        "primary_model_type": "Deep Learning (PyTorch)" if is_dl else "Classical Baseline (Fallback)",
+        "architecture": "Bidirectional LSTM with Bahdanau Additive Attention" if is_dl else "TF-IDF + Calibrated Linear Classifier",
+        "framework": "PyTorch 2.x" if is_dl else "Scikit-Learn",
+        "explainability_engine": "Bahdanau Attention Token Saliency" if is_dl else "TF-IDF Coefficient Attribution",
+        "parameters": {
+            "vocab_size": len(model.vocab.word2idx) if is_dl else getattr(model.vectorizer, 'max_features', 50000),
+            "sequence_length": getattr(model, 'max_len', 256) if is_dl else "N/A",
+            "device": str(getattr(model, 'device', 'cpu')) if is_dl else "cpu",
+            "attention_mechanism": "Additive Bahdanau [v^T * tanh(W * h)]" if is_dl else "None"
+        },
+        "benchmark_summary": {
+            "dl_test_accuracy": metrics.get("deep_learning_bilstm_attention", {}).get("accuracy"),
+            "dl_macro_f1": metrics.get("deep_learning_bilstm_attention", {}).get("macro_f1"),
+            "dl_roc_auc": metrics.get("deep_learning_bilstm_attention", {}).get("roc_auc"),
+            "peak_ensemble_accuracy": metrics.get("peak_accuracy")
+        },
+        "target_ground_truth": "0 = Fake News, 1 = Real News"
     }

@@ -187,54 +187,55 @@ c:/AI Powered Fake News Detection/
 
 ---
 
-## 3. Detailed Modeling Stack: Classical, Neural Attention & Transformers
+## 3. Detailed Modeling Stack: Deep Learning Core, Ensembles & Baselines
 
-The project architecture accommodates three distinct modeling paradigms:
+The project architecture features a primary **Deep Learning (PyTorch)** production engine paired with deep ensemble stacking and fast linear fallbacks:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                          FACTCHECK Modeling Stack                           │
+│                       VERITASAI Deep Learning Stack                         │
 ├────────────────────────────────┬────────────────────────────────────────────┤
-│ Route A: Production Serving    │ • Dual TF-IDF (Word 1-2g + Char 3-4g)      │
-│ (Active in artifacts/)         │ • Calibrated Passive-Aggressive / LogReg   │
-│                                │ • Sub-5ms inference, <50MB RAM             │
-│                                │ • 98.72% Holdout Test Accuracy             │
+│ Tier 1: Production DL Core     │ • `BiLSTMAttentionClassifier` (PyTorch)    │
+│ (Active in artifacts/)         │ • `BahdanauAttention` learned token weights│
+│                                │ • 35,000-token sequence vocabulary         │
+│                                │ • Intrinsic token-level Explainable AI     │
 ├────────────────────────────────┼────────────────────────────────────────────┤
-│ Route B: Neural Sequence &     │ • `BiLSTMAttentionClassifier`              │
-│ Attention Modeling (PyTorch)   │ • `BahdanauAttention` additive mechanism   │
-│                                │ • `CNNBiLSTMClassifier` multi-scale hybrid │
-│                                │ • Learns context vectors across time steps │
+│ Tier 2: Stacking Deep Ensemble │ • `StackingEnsembleModel` meta-learner     │
+│ (artifacts/stacking_ensemble)  │ • Fuses sequence probabilities + baselines │
+│                                │ • 93.57% Holdout Test Accuracy             │
+│                                │ • 0.9872 ROC-AUC Score                     │
 ├────────────────────────────────┼────────────────────────────────────────────┤
-│ Route C: Transformer           │ • `RoBERTa-base` / `DeBERTa-v3-base`       │
-│ Fine-Tuning Specification      │ • Dual-segment tokenizer (512 token limit) │
-│ (dataset_study/ specifications)│ • Multi-Head Self-Attention layers         │
-│                                │ • Designed for GPU-enabled deployments     │
+│ Tier 3: Multi-Scale Neural     │ • `CNNBiLSTMClassifier`                    │
+│ Hybrid Modeling (PyTorch)      │ • Parallel Conv1D kernels (3, 4, 5)        │
+│                                │ • Temporal max-pooling + BiLSTM context    │
+├────────────────────────────────┼────────────────────────────────────────────┤
+│ Tier 4: Fallback Baselines     │ • Calibrated Passive-Aggressive Classifier │
+│ & Transformer Specs            │ • Regularized Logistic Regression          │
+│                                │ • RoBERTa/DeBERTa GPU transformer blueprint│
 └────────────────────────────────┴────────────────────────────────────────────┘
 ```
 
-### Route A — Production Serving Model (`FakeNewsPipeline`)
-- **Dual Vectorizer:** Combines word n-grams ($1\text{--}2$ grams, 50k features) on fused text with character n-grams ($3\text{--}4$ grams, 10k features, case-sensitive) on titles. Captures both topic semantics and stylistic signals (e.g., casing, punctuation density, typos).
-- **Classifiers:** Calibrated Passive-Aggressive Classifier (sigmoid calibration via 3-fold CV) and regularized Logistic Regression ($C=0.8$, $L_2$ penalty).
-- **Deployment Advantage:** Runs at **sub-5 millisecond inference latency** on standard CPUs without GPU dependencies, consuming under 50MB of RAM. This prevents memory-overflow restarts on free-tier hosting platforms (such as Render's 512MB RAM ceiling).
-
-### Route B — Neural Attention & Deep Learning (`src/models/lstm_attention.py`, `cnn_bilstm.py`)
+### Tier 1 — Primary Production Deep Learning Core (`DeepLearningNewsPipeline`)
 - **PyTorch BiLSTM with Bahdanau Attention (`BiLSTMAttentionClassifier`):**
-  - **Embedding Layer:** 128-dimensional learned embeddings with 2D spatial dropout.
-  - **Bidirectional LSTM:** 2-layer recurrent network generating forward and backward hidden states:
+  - **Embedding Layer:** 128-dimensional learned token embeddings with 2D spatial dropout mapping words into continuous dense geometric space.
+  - **Bidirectional LSTM Core:** Recurrent network generating forward and backward temporal hidden representations:
     $$\vec{h}_t = \text{LSTM}(\vec{h}_{t-1}, x_t), \quad \overleftarrow{h}_t = \text{LSTM}(\overleftarrow{h}_{t+1}, x_t), \quad h_t = [\vec{h}_t \,;\, \overleftarrow{h}_t]$$
-  - **Bahdanau Additive Attention:** Dynamically calculates attention scores and weights over hidden states to generate a focused context vector $c$:
+  - **Bahdanau Additive Attention Mechanism:** Dynamically learns temporal focus scores over sequence hidden states to synthesize an informative document context vector $c$:
     $$e_t = v^T \tanh(W h_t), \quad \alpha_t = \frac{\exp(e_t)}{\sum_{k=1}^T \exp(e_k)}, \quad c = \sum_{t=1}^T \alpha_t h_t$$
-  - **Classification Head:** Multi-layer feed-forward network with LayerNorm, ReLU, and dropout.
-- **CNN-BiLSTM Hybrid (`CNNBiLSTMClassifier`):**
-  - Parallel 1D temporal convolutions with kernel sizes 3, 4, and 5 to capture multi-scale local phrase patterns.
-  - Concatenated convolutional activations fed into a bidirectional LSTM for global sequence modeling, followed by temporal max-pooling and dense classification.
+  - **Classification Head:** Deep multi-layer feed-forward projection with Layer Normalization, ReLU activation, Dropout regularization, and Sigmoid probability output.
+  - **Intrinsic Explainable AI (XAI):** The learned attention weights $\alpha_t$ directly drive the token saliency maps, illuminating exactly which words triggered the fake or real classification.
+  - **Serialized Artifacts:** Model state weights (`artifacts/bilstm_attention_best.pt`) and vocabulary mapping (`artifacts/vocab.json`).
 
-### Route C — Transformer Specification (`RoBERTa-base` / `DeBERTa-v3-base`)
-- Detailed in [`dataset_study/03_nlp_preprocessing_and_tokenization_spec.md`](file:///c:/AI%20Powered%20Fake%20News%20Detection/dataset_study/03_nlp_preprocessing_and_tokenization_spec.md) and [`dataset_study/04_modeling_and_deep_learning_architecture.md`](file:///c:/AI%20Powered%20Fake%20News%20Detection/dataset_study/04_modeling_and_deep_learning_architecture.md).
-- **Tokenizer:** Dual-segment tokenizer preserving the headline and truncating only the body:
-  `tokenizer(title, text, max_length=512, truncation="only_second")`.
-- **Architecture:** Pre-trained 12-layer multi-head self-attention transformer backbone with a pooled classification head.
-- **Role in the Project:** Represents the high-compute transformer benchmark blueprint for dedicated GPU servers. The lightweight dual-vectorizer linear model was selected for production serving to maintain sub-second response times and zero cloud operational costs.
+### Tier 2 — Stacking Deep Ensemble (`StackingEnsembleModel`)
+- **Meta-Learner Architecture:** Combines out-of-fold probabilistic outputs from the primary BiLSTM Attention network with calibrated feature learners.
+- **Holdout Test Benchmark:** Achieves **93.57% Accuracy** and **0.9872 ROC-AUC** across 11,396 unseen holdout articles.
+
+### Tier 3 — Multi-Scale Hybrid CNN-BiLSTM (`CNNBiLSTMClassifier`)
+- Multi-scale parallel 1D temporal convolutions with kernel sizes 3, 4, and 5 capture local n-gram clickbait triggers, feeding into a bidirectional LSTM for global narrative modeling.
+
+### Tier 4 — Classical Baselines & GPU Transformer Specifications
+- Calibrated Passive-Aggressive and Logistic Regression models are preserved for comparative benchmarking and sub-5ms low-resource fallback.
+- Transformer blueprints for `roberta-base` and `microsoft/deberta-v3-base` are detailed in `dataset_study/04_modeling_and_deep_learning_architecture.md`.
 
 ---
 

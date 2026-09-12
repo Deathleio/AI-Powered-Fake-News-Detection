@@ -1,4 +1,4 @@
-﻿import unittest
+import unittest
 import numpy as np
 import torch
 from src.models.baselines import FakeNewsPipeline, build_vectorizer
@@ -35,6 +35,22 @@ class TestModels(unittest.TestCase):
         input_tensor = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]], dtype=torch.long)
         logits = model(input_tensor)
         self.assertEqual(logits.shape, (1,))
+
+    def test_deep_learning_pipeline(self):
+        from src.models.lstm_attention import DeepLearningNewsPipeline
+        texts = ["breaking news headline", "regular factual report"]
+        vocab = TextVocabulary(max_vocab_size=100)
+        vocab.build_vocab(texts)
+        model = BiLSTMAttentionClassifier(vocab_size=len(vocab.word2idx), embedding_dim=16, hidden_dim=16)
+        pipeline = DeepLearningNewsPipeline(model, vocab, max_len=10)
+        
+        proba = pipeline.predict_proba(["breaking news"])
+        self.assertEqual(proba.shape, (1, 2))
+        self.assertAlmostEqual(proba[0, 0] + proba[0, 1], 1.0, places=4)
+        
+        explanation = pipeline.explain_text("breaking news headline")
+        self.assertIn("real_indicators", explanation)
+        self.assertIn("fake_indicators", explanation)
 
 if __name__ == '__main__':
     unittest.main()
