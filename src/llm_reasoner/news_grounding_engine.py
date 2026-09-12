@@ -31,9 +31,14 @@ STOPWORDS = {
     "such", "no", "nor", "not", "only", "own", "same", "so", "than", "too", "very",
     "s", "t", "can", "will", "just", "don", "should", "now", "says", "said", "new",
     "report", "reports", "state", "states", "year", "years", "pop", "star", "icon",
-    "announces", "announced", "announcing", "reveals", "revealed", "revealing",
+    "announces", "announced", "announcing", "announcement", "reveals", "revealed", "revealing",
     "confirms", "confirmed", "confirming", "claims", "claimed", "claiming",
-    "surprise", "project", "major", "latest", "first", "look", "drops", "release",
+    "surprise", "project", "major", "latest", "first", "look", "drops",
+    "launch", "launches", "launched", "launching",
+    "unveil", "unveils", "unveiled", "unveiling",
+    "introduce", "introduces", "introduced", "introducing",
+    "release", "releases", "released", "releasing",
+    "that", "this", "these", "those", "it", "its", "they", "them", "their",
     "official", "update", "updates", "video", "photos", "watch", "see", "fans", "insiders"
 }
 
@@ -68,12 +73,45 @@ def clean_query_keywords(query: str, max_tokens: int = 8) -> str:
 
 # Common institutional, geographical, and high-profile public entities
 COMMON_ENTITIES = {
+    # Government & International
     "nasa", "mars", "rover", "moon", "space", "biden", "trump", "senate", "congress",
     "white", "house", "pentagon", "fed", "federal", "reserve", "bank", "police",
     "government", "ukraine", "russia", "china", "who", "cdc", "fbi", "court",
-    "openai", "google", "microsoft", "apple", "anthropic", "meta", "nvidia", "intel", "tesla",
-    "rihanna", "swift", "taylor", "musk", "elon", "bezos", "gates", "zuckerberg"
+    "sec", "ftc", "faa", "un", "nato", "eu", "imf",
+    # Tech & AI Giants
+    "crowdstrike", "openai", "google", "microsoft", "apple", "anthropic", "meta", 
+    "nvidia", "intel", "amd", "tesla", "amazon", "cisco", "oracle", "ibm",
+    "salesforce", "adobe", "palantir", "cloudflare", "uber", "spacex", "deepmind",
+    "samsung", "huawei", "bytedance", "tiktok", "twitter", "x", "tsmc", "broadcom",
+    # Industry & Pharma
+    "boeing", "lockheed", "pfizer", "moderna", "astrazeneca", "johnson", "bayer",
+    # Prominent Figures
+    "rihanna", "swift", "taylor", "musk", "elon", "bezos", "gates", "zuckerberg", "altman", "huang"
 }
+
+# Generic domain topic nouns and context words that do not by themselves constitute a unique claim assertion
+DOMAIN_TOPIC_NOUNS = {
+    "cybersecurity", "security", "vulnerability", "vulnerabilities", "software", "hardware",
+    "operating", "system", "systems", "enterprise", "technology", "technologies", "cloud",
+    "network", "networks", "data", "digital", "service", "services", "platform", "platforms",
+    "company", "firm", "corp", "corporation", "inc", "ltd", "ceo", "cto", "executive", "executives",
+    "industry", "market", "markets", "stock", "stocks", "shares", "investors", "economy",
+    "economic", "policy", "policies", "program", "programs", "department", "agency", "agencies",
+    "official", "officials", "spokesperson", "spokesman", "statement", "announcement",
+    "research", "researchers", "study", "studies", "scientists", "experts", "analysts",
+    "device", "devices", "computer", "computers", "internet", "web", "online", "app", "apps",
+    "application", "applications", "tool", "tools", "product", "products", "project", "projects",
+    "model", "models", "algorithm", "algorithms", "ai", "artificial", "intelligence", "telescope",
+    "telescopes", "satellite", "satellites", "rates", "rate", "interest"
+}
+
+def _stem_word(w: str) -> str:
+    """Lightweight suffix normalizer for common English inflections."""
+    w = w.lower()
+    for suff in ("ies", "es", "s", "ed", "ing"):
+        if w.endswith(suff) and len(w) - len(suff) >= 3:
+            return w[:-len(suff)]
+    return w
 
 class HeadlineMatchResult(float):
     """
@@ -104,9 +142,9 @@ NATION_ENTITIES = {
 
 def calculate_headline_similarity(query: str, headline: str) -> HeadlineMatchResult:
     """
-    Computes a hybrid lexical overlap and entity match score between query and headline.
-    Distinguishes between broad topic alignment (matching background entities) and
-    actual claim corroboration (matching the specific breakthrough or assertion predicates).
+    Computes a strict lexical overlap and entity match score between query and headline.
+    Strictly distinguishes between broad topic alignment (matching entities or generic domain nouns)
+    and actual claim corroboration (matching the specific breakthrough or assertion predicates).
 
     Returns:
         HeadlineMatchResult (float with match_level and claim_matched attributes, iterable as 3-tuple)
@@ -117,8 +155,10 @@ def calculate_headline_similarity(query: str, headline: str) -> HeadlineMatchRes
     if not q_tokens or not h_tokens:
         return HeadlineMatchResult(0.0, "No Match", False)
         
-    intersection = q_tokens.intersection(h_tokens)
-    if not intersection:
+    q_stems = {_stem_word(t) for t in q_tokens}
+    h_stems = {_stem_word(t) for t in h_tokens}
+    stem_intersection = q_stems.intersection(h_stems)
+    if not stem_intersection:
         return HeadlineMatchResult(0.0, "No Match", False)
 
     # Disallow cross-national entity confusion (e.g. Syrian central bank cannot corroborate Swiss central bank)
@@ -127,31 +167,34 @@ def calculate_headline_similarity(query: str, headline: str) -> HeadlineMatchRes
     if q_nations and h_nations and not q_nations.intersection(h_nations):
         return HeadlineMatchResult(0.0, "No Match", False)
 
-    # Separate background entities from core claim assertion tokens
-    claim_tokens = {t for t in q_tokens if t not in COMMON_ENTITIES}
-    claim_intersection = claim_tokens.intersection(h_tokens) if claim_tokens else set()
+    # Identify entity stems and domain stems
+    entity_stems = {_stem_word(t) for t in q_tokens if t in COMMON_ENTITIES or t in NATION_ENTITIES}
+    entity_matched = bool(entity_stems.intersection(stem_intersection))
 
-    # Jaccard index
-    jaccard = len(intersection) / len(q_tokens.union(h_tokens))
-    # Recall relative to query
-    query_coverage = len(intersection) / len(q_tokens)
-    
-    # Claim coverage: how many of the non-background claim predicates are in the headline
-    claim_coverage = len(claim_intersection) / len(claim_tokens) if claim_tokens else query_coverage
+    stop_stems = {_stem_word(s) for s in STOPWORDS}
+    # Core assertion tokens: specific action predicates, findings, or claims (NOT entities, NOT generic domain nouns, NOT stopwords)
+    assertion_stems = {_stem_word(t) for t in q_tokens if t not in COMMON_ENTITIES and t not in NATION_ENTITIES and t not in DOMAIN_TOPIC_NOUNS} - stop_stems
+    assertion_matched = assertion_stems.intersection(stem_intersection)
 
-    # Claim must have substantive coverage of assertion predicates
+    query_coverage = len(stem_intersection) / len(q_stems)
+    jaccard = len(stem_intersection) / len(q_stems.union(h_stems))
+
+    # Strict assertion corroboration rule:
+    # A claim CANNOT be matched solely on background entity and generic domain tokens.
     claim_matched = False
-    if claim_tokens:
-        if len(claim_tokens) <= 2 and len(claim_intersection) >= 1:
-            claim_matched = True
-        elif len(claim_intersection) >= 2 and len(intersection) >= 3:
-            claim_matched = True
-        elif len(claim_intersection) >= 3 or claim_coverage >= 0.35:
-            claim_matched = True
+    if assertion_stems:
+        if len(assertion_stems) >= 3:
+            claim_matched = (len(assertion_matched) >= 2) or (len(assertion_matched) >= 1 and query_coverage >= 0.50)
+        else:
+            claim_matched = len(assertion_matched) >= 1 and query_coverage >= 0.35
+    else:
+        # Query only contained entity and domain tokens
+        claim_matched = (query_coverage >= 0.50)
 
     if claim_matched:
-        score = (0.50 * claim_coverage) + (0.30 * query_coverage) + (0.20 * jaccard)
-        score = float(round(score, 3))
+        assertion_cov = len(assertion_matched) / len(assertion_stems) if assertion_stems else query_coverage
+        score = (0.50 * assertion_cov) + (0.30 * query_coverage) + (0.20 * jaccard)
+        score = float(round(min(score, 1.0), 3))
         if score >= 0.40:
             match_level = "High Overlap"
         elif score >= 0.20:
@@ -159,10 +202,8 @@ def calculate_headline_similarity(query: str, headline: str) -> HeadlineMatchRes
         else:
             match_level = "Contextual Related"
     else:
-        # Only classify as Topic Only if actual background entities were matched
-        entity_tokens = {t for t in q_tokens if t in COMMON_ENTITIES}
-        entity_match = bool(entity_tokens.intersection(h_tokens))
-        if entity_match and query_coverage >= 0.15:
+        # If entities or domain nouns matched but the core assertion is absent
+        if entity_matched or len(stem_intersection) >= 1:
             score = float(round(min(0.18, 0.25 * query_coverage), 3))
             match_level = "Topic Only (Claim Absent)"
         else:

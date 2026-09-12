@@ -15,33 +15,54 @@ REFUTATION_CUES = {
 def fetch_encyclopedic_corroboration(query: str, max_results: int = 2) -> list:
     """
     Queries open Wikipedia API to fetch factual grounding snippets for entity/claim verification.
-    Timeout 1.5s to prevent blocking.
+    Validates candidate results to prevent irrelevant cross-domain matches.
+    Timeout 2.0s to prevent blocking.
     """
     if not query or len(query.strip()) < 5:
         return []
     
-    clean_q = " ".join([w for w in query.split() if len(w) > 3][:6])
-    url = f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={urllib.parse.quote(clean_q)}&format=json&utf8=1&srlimit={max_results}"
+    # Prioritize proper nouns / named entities
+    words = [w for w in query.split() if len(w) > 2]
+    proper_nouns = [w for w in words if w[0].isupper() and w.lower() not in {"the", "and", "that", "this", "with", "from", "for", "breaking"}]
+    
+    if proper_nouns:
+        clean_q = " ".join(proper_nouns[:3])
+    else:
+        clean_q = " ".join(words[:4])
+        
+    url = f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={urllib.parse.quote(clean_q)}&format=json&utf8=1&srlimit={max_results * 2}"
     
     try:
         req = urllib.request.Request(
             url, 
-            headers={'User-Agent': 'VeritasAI-FakeNewsDetector/1.0 (academic research fact check)'}
+            headers={'User-Agent': 'VeritasAI-FakeNewsDetector/2.1 (academic research fact check)'}
         )
-        with urllib.request.urlopen(req, timeout=1.5) as response:
+        with urllib.request.urlopen(req, timeout=2.0) as response:
             data = json.loads(response.read().decode('utf-8'))
             results = data.get('query', {}).get('search', [])
+            
+            import re
+            q_tokens = set(re.findall(r'\b[a-zA-Z0-9]{3,}\b', query.lower())) - {"the", "and", "that", "this", "with", "from", "for"}
             grounding = []
+            
             for r in results:
-                import re
+                title = r.get('title', '')
+                title_tokens = set(re.findall(r'\b[a-zA-Z0-9]{3,}\b', title.lower()))
+                # Require that Wikipedia article title actually shares words/entities with the query
+                if not q_tokens.intersection(title_tokens):
+                    continue
+                    
                 clean_snippet = re.sub(r'<.*?>', '', r.get('snippet', ''))
                 snippet_lower = clean_snippet.lower()
                 has_refutation = any(cue in snippet_lower for cue in REFUTATION_CUES)
                 grounding.append({
-                    "title": r.get('title'),
+                    "title": title,
                     "snippet": clean_snippet,
                     "has_refutation": has_refutation
                 })
+                if len(grounding) >= max_results:
+                    break
+                    
             return grounding
     except Exception:
         return []
@@ -98,13 +119,21 @@ class LLMFactCheckReasoner:
                 except Exception:
                     pass
         
-        reasons = []
         topic_absent = news_info.get("topic_covered_claim_absent", False)
         has_claim_corrob = news_info.get("has_claim_corroboration", False)
 
+        # If topic is reported in news wires but claim is completely absent, update fake status
+        if topic_absent and not is_fake:
+            is_fake = True
+            fake_probability = max(fake_probability, 0.88)
+            confidence = fake_probability
+            verdict = "Likely Fake / Sensationalized"
+
+        reasons = []
+
         if is_fake:
             if topic_absent:
-                reasons.append("Topic entities (e.g. agency or institutions) are actively reported in current news, but the specific high-impact claim is absent from all wire reports, indicating an unverified or fabricated assertion.")
+                reasons.append("Topic entities (e.g. agency, company, or institutions) are actively reported in current news, but the specific high-impact claim is absent from all wire reports, indicating an unverified or fabricated assertion.")
             elif not has_claim_corrob:
                 if stylistic_info and (stylistic_info.get("is_all_caps_title") or stylistic_info.get("sensational_keywords")):
                     reasons.append("Zero corroborating press wire reports found across major global news agencies, indicating an unverified claim or fabrication.")
@@ -134,7 +163,8 @@ class LLMFactCheckReasoner:
                 reasons.append("Stylistic tone exhibits framing characteristic of unverified news.")
         else:
             if has_claim_corrob:
-                top_pubs = ", ".join(news_info.get("top_publishers", [])[:2])
+                matched_pubs = [a.get("source") for a in news_info.get("articles", []) if a.get("claim_matched") and a.get("source")]
+                top_pubs = ", ".join(matched_pubs[:2]) if matched_pubs else "recognized news outlets"
                 reasons.append(f"Claim corroborated by live press wire reports from recognized outlets ({top_pubs}).")
                 
             if stylistic_info and stylistic_info.get("attribution_keywords"):

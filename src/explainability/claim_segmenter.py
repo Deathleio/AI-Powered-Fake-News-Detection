@@ -22,7 +22,15 @@ EXTRAORDINARY_ASSERTION_PATTERNS = [
     r'\b(distribution\s+rights\s+were\s+reportedly\s+acquired\s+for)\b',
     r'\b(replaces?\s+(all\s+)?(paper\s+)?currency\s+with\s+(sovereign\s+)?(physical\s+)?(gold|silver|tokens?|crypto))\b',
     r'\b((gold|silver|asset)[- ]backed\s+(tokens?|currency|monetary\s+standard|dollar|franc|euro))\b',
-    r'\b(return(ing)?\s+to\s+(the\s+)?gold\s+standard|abolish(es|ed|ing)?\s+(all\s+)?paper\s+(money|currency))\b'
+    r'\b(return(ing)?\s+to\s+(the\s+)?gold\s+standard|abolish(es|ed|ing)?\s+(all\s+)?paper\s+(money|currency))\b',
+    r'\b(infallible(\s+self[- ]healing)?(\s+mechanism)?|infallible\s+ai|infallible\s+software)\b',
+    r'\b(instantly\s+fixes?(\s+all)?\s+(code\s+)?(vulnerabilit|bugs?|defects?|security))\b',
+    r'\b(altering\s+live\s+.*?(operating\s+systems?|kernels?|servers?|production)\s+in\s+real[- ]time)\b',
+    r'\b(without\s+human\s+(intervention|code\s+review|oversight|testing))\b',
+    r'\b(eliminates?\s+the\s+need\s+for\s+(software\s+)?(engineers?|developers?|human\s+testing|patches?))\b',
+    r'\b(guaranteeing\s+a?\s*(100%|total)\s+reduction\s+in\s+(digital\s+system\s+)?(crashes|outages|failures|vulnerabilities))\b',
+    r'\b(autonomous\s+ai\s+model\s+capable\s+of\s+altering\s+live)\b',
+    r'\b(100%\s+(reduction|protection|immunity|uptime\s+guarantee))\b'
 ]
 
 # Domain-specific technical and scientific terminology patterns

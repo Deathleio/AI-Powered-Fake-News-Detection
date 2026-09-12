@@ -158,11 +158,11 @@ def compute_hybrid_fake_probability(
         # Multiple verified news wires reported the story with genuine claim overlap
         if has_wire and has_claim and news_score >= 0.35 and risk <= 0.20:
             p_fake = min(p_fake * 0.20, 0.08)
-        elif has_claim and total_matches >= 3 and news_score >= 0.25 and risk <= 0.15:
-            p_fake = min(p_fake * 0.40, 0.15)
-        # Extraordinary claim where topic is reported on wires, but breakthrough claim is ABSENT from all wires
-        elif topic_absent and not (attribution_score >= 0.35 and risk == 0.0):
-            p_fake = max(p_fake, 0.76)
+        elif has_wire and has_claim and news_score >= 0.25 and risk <= 0.25:
+            p_fake = min(p_fake * 0.35, 0.15)
+        # Extraordinary claim where topic is reported on wires/news, but breakthrough claim is ABSENT from all reports
+        elif topic_absent:
+            p_fake = max(p_fake, 0.88)
         # Extreme sensationalism or breaking claim with absolute ZERO press wire coverage
         elif total_matches == 0 and (sensational_score >= 0.30 or is_all_caps):
             p_fake = max(0.85, p_fake)
@@ -171,17 +171,17 @@ def compute_hybrid_fake_probability(
     has_extraordinary = bool(mixed_info and (mixed_info.get("is_mixed_veracity") or mixed_info.get("has_extraordinary_claim")))
     if has_extraordinary:
         # The article asserts an extraordinary breakthrough or crisis assertion
-        p_fake = max(p_fake, 0.76)
+        p_fake = max(p_fake, 0.85)
 
     # 5. Extraordinary / Unverified Breaking Claim Guard
-    is_unverified_breakthrough = (topic_absent and not (attribution_score >= 0.35 and risk == 0.0)) or has_extraordinary
+    is_unverified_breakthrough = topic_absent or has_extraordinary
 
     if is_unverified_breakthrough:
         # Extraordinary claims require verified press wire corroboration
         has_wire = news_info and news_info.get("has_wire_corroboration", False)
         has_claim = news_info and news_info.get("has_claim_corroboration", False)
         if not (has_wire and has_claim):
-            p_fake = max(p_fake, 0.76)
+            p_fake = max(p_fake, 0.88 if topic_absent else 0.82)
     else:
         # High institutional attribution with zero sensational risk (e.g. corporate security / technical disclosure)
         if attribution_score >= 0.35 and risk == 0.0 and not has_extraordinary and not sensational_words:
@@ -316,7 +316,7 @@ def explain_news(request: NewsArticleRequest):
 
     # Veritas Trust Score: 0 (Severe Disinformation) to 100 (Rock-solid Veracity)
     if is_partially_fake:
-        veritas_score = int(round(max(15, min(35, proba_real * 100))))
+        veritas_score = int(round(min(30, proba_real * 100)))
     else:
         veritas_score = int(round(proba_real * 100))
 
